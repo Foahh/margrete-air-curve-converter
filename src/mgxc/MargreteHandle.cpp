@@ -1,11 +1,11 @@
-#include "Margrete.h"
+#include "MargreteHandle.h"
 
 #include <MargretePlugin.h>
 #include <stdexcept>
 
 #include "Dialog.h"
 
-Margrete::Margrete(IMargretePluginContext *ctx) {
+MargreteHandle::MargreteHandle(IMargretePluginContext *ctx) {
     if (m_ctx == ctx) {
         return;
     }
@@ -28,9 +28,9 @@ Margrete::Margrete(IMargretePluginContext *ctx) {
     }
 }
 
-MpBoolean Margrete::CanCommit() const { return m_ctx && m_doc && m_undo; }
+MpBoolean MargreteHandle::CanCommit() const { return m_ctx && m_doc && m_undo; }
 
-MgComPtr<IMargretePluginChart> Margrete::GetChart() const {
+MgComPtr<IMargretePluginChart> MargreteHandle::GetChart() const {
     if (!m_ctx) {
         throw std::runtime_error("IMargretePluginContext is not initialized");
     }
@@ -47,20 +47,20 @@ MgComPtr<IMargretePluginChart> Margrete::GetChart() const {
     return chart;
 }
 
-MpInteger Margrete::GetTickOffset() const {
+MpInteger MargreteHandle::GetTickOffset() const {
     if (!m_ctx) {
         return 0;
     }
     return m_ctx->getCurrentTick();
 }
 
-void Margrete::BeginRecording() const {
+void MargreteHandle::BeginRecording() const {
     if (m_undo) {
         m_undo->beginRecording();
     }
 }
 
-void Margrete::CommitRecording() const {
+void MargreteHandle::CommitRecording() const {
     if (m_undo) {
         m_undo->commitRecording();
     }
@@ -69,7 +69,7 @@ void Margrete::CommitRecording() const {
     }
 }
 
-void Margrete::DiscardRecording() const {
+void MargreteHandle::DiscardRecording() const {
     if (m_undo) {
         m_undo->discardRecording();
     }
@@ -78,7 +78,7 @@ void Margrete::DiscardRecording() const {
     }
 }
 
-HWND Margrete::GetHWND() const {
+HWND MargreteHandle::GetHWND() const {
     if (!m_ctx) {
         return nullptr;
     }

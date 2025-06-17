@@ -611,85 +611,84 @@ void Dialog::UI_Component_Combo_EasingMode(const std::string_view &label, Easing
     }
 }
 
+void Dialog::UI_Component_Combo_Division() const {
+    static const std::vector snapDivisors = {1920, 960, 480, 384, 192, 128, 96, 64, 48, 32, 24, 16, 12, 8, 4};
+    int selectedDivisorIndex = -1;
+    if (m_cctx.snap > 0 && mgxc::BAR_TICKS % m_cctx.snap == 0) {
+        const int divisor = mgxc::BAR_TICKS / m_cctx.snap;
+        const auto it = std::ranges::find(snapDivisors, divisor);
+        if (it != snapDivisors.end()) {
+            selectedDivisorIndex = static_cast<int>(std::distance(snapDivisors.begin(), it));
+        }
+    }
+
+    std::string previewStr;
+    if (selectedDivisorIndex >= 0) {
+        previewStr = std::to_string(snapDivisors[selectedDivisorIndex]);
+    }
+
+    ImGui::PushItemWidth(55.0f);
+
+    if (ImGui::BeginCombo("=", previewStr.c_str())) {
+        for (int i = 0; i < snapDivisors.size(); i++) {
+            const bool isSelected = selectedDivisorIndex == i;
+            if (ImGui::Selectable(std::to_string(snapDivisors[i]).c_str(), isSelected)) {
+                m_cctx.snap = mgxc::BAR_TICKS / snapDivisors[i];
+            }
+
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    ImGui::PopItemWidth();
+    ImGui::PushItemWidth(85.0f);
+    ImGui::SameLine();
+
+    int snapInput = m_cctx.snap;
+    if (ImGui::InputInt("Division", &snapInput)) {
+        snapInput = std::clamp(snapInput, 1, mgxc::BAR_TICKS);
+        m_cctx.snap = snapInput;
+    }
+
+    ImGui::PopItemWidth();
+}
+void Dialog::UI_Component_Combo_Easing() const {
+    auto &[m_kind, m_exponent, m_epsilon] = m_cctx.solver;
+    static const char *esTypeNames[] = {"Sine", "Power", "Circular"};
+    auto esTypeInt = static_cast<int>(m_kind);
+
+    if (ImGui::Combo("Easing", &esTypeInt, esTypeNames, IM_ARRAYSIZE(esTypeNames))) {
+        m_kind = static_cast<EasingKind>(esTypeInt);
+    }
+
+    if (m_kind == EasingKind::Power) {
+        const int prev = m_exponent;
+        ImGui::InputInt("Exponent [!=0]", &m_exponent);
+        if (m_exponent == 0) {
+            if (prev > m_exponent) {
+                m_exponent = -1;
+            } else {
+                m_exponent = 1;
+            }
+        }
+    } else if (m_kind == EasingKind::Circular) {
+        ImGui::InputDouble("Linearity [0,1]", &m_epsilon, 0.01, 0.1, "%.3f");
+        m_epsilon = std::clamp(m_epsilon, 0.0, 1.0);
+    }
+}
 void Dialog::UI_Panel_Config_Convert() const {
     ImGui::TextUnformatted("Convert Config");
     ImGui::BeginChild("##Config", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
 
-    // Division
-    {
-        static const std::vector snapDivisors = {1920, 960, 480, 384, 192, 128, 96, 64, 48, 32, 24, 16, 12, 8, 4};
-        int selectedDivisorIndex = -1;
-        if (m_cctx.snap > 0 && mgxc::BAR_TICKS % m_cctx.snap == 0) {
-            const int divisor = mgxc::BAR_TICKS / m_cctx.snap;
-            const auto it = std::ranges::find(snapDivisors, divisor);
-            if (it != snapDivisors.end()) {
-                selectedDivisorIndex = static_cast<int>(std::distance(snapDivisors.begin(), it));
-            }
-        }
-
-        std::string previewStr;
-        if (selectedDivisorIndex >= 0) {
-            previewStr = std::to_string(snapDivisors[selectedDivisorIndex]);
-        }
-
-        ImGui::PushItemWidth(55.0f);
-
-        if (ImGui::BeginCombo("=", previewStr.c_str())) {
-            for (int i = 0; i < snapDivisors.size(); i++) {
-                const bool isSelected = selectedDivisorIndex == i;
-                if (ImGui::Selectable(std::to_string(snapDivisors[i]).c_str(), isSelected)) {
-                    m_cctx.snap = mgxc::BAR_TICKS / snapDivisors[i];
-                }
-
-                if (isSelected) {
-                    ImGui::SetItemDefaultFocus();
-                }
-            }
-            ImGui::EndCombo();
-        }
-
-        ImGui::PopItemWidth();
-        ImGui::PushItemWidth(85.0f);
-        ImGui::SameLine();
-
-        int snapInput = m_cctx.snap;
-        if (ImGui::InputInt("Division", &snapInput)) {
-            snapInput = std::clamp(snapInput, 1, mgxc::BAR_TICKS);
-            m_cctx.snap = snapInput;
-        }
-
-        ImGui::PopItemWidth();
-    }
-
+    UI_Component_Combo_Division();
     ImGui::Separator();
+
     ImGui::PushItemWidth(100.0f);
 
-    // Easing
-    {
-        auto &[m_kind, m_exponent, m_epsilon] = m_cctx.solver;
-        static const char *esTypeNames[] = {"Sine", "Power", "Circular"};
-        auto esTypeInt = static_cast<int>(m_kind);
-
-        if (ImGui::Combo("Easing", &esTypeInt, esTypeNames, IM_ARRAYSIZE(esTypeNames))) {
-            m_kind = static_cast<EasingKind>(esTypeInt);
-        }
-
-        if (m_kind == EasingKind::Power) {
-            const int prev = m_exponent;
-            ImGui::InputInt("Exponent [!=0]", &m_exponent);
-            if (m_exponent == 0) {
-                if (prev > m_exponent) {
-                    m_exponent = -1;
-                } else {
-                    m_exponent = 1;
-                }
-            }
-        } else if (m_kind == EasingKind::Circular) {
-            ImGui::InputDouble("Linearity [0,1]", &m_epsilon, 0.01, 0.1, "%.3f");
-            m_epsilon = std::clamp(m_epsilon, 0.0, 1.0);
-        }
-    }
-
+    UI_Component_Combo_Easing();
     ImGui::Separator();
 
     ImGui::InputInt("x Offset [±15]", &m_cctx.xOffset);

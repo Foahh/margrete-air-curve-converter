@@ -41,7 +41,7 @@ private:
     int m_selChain{-1};
     int m_selControl{-1};
 
-    Margrete m_mg;
+    MargreteHandle m_mg;
     Config &m_cctx;
 
     // Win32
@@ -80,6 +80,8 @@ private:
 
     static void UI_Component_Editor_Chain(std::vector<mgxc::Note> &chain);
     static void UI_Component_Combo_EasingMode(const std::string_view &label, EasingMode &esMode);
+    void UI_Component_Combo_Division() const;
+    void UI_Component_Combo_Easing() const;
     void UI_Component_Button_File();
 
     template<class Container, class Creator, class Labeler, class Extra = std::nullptr_t>

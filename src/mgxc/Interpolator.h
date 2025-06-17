@@ -3,14 +3,14 @@
 #include <vector>
 
 #include "Config.h"
-#include "Margrete.h"
+#include "MargreteHandle.h"
 
 class Interpolator {
 public:
     explicit Interpolator(Config &cctx);
 
     void Convert(int idx = -1);
-    void CommitChart(const Margrete &mg) const;
+    void CommitChart(const MargreteHandle &mg) const;
 
     std::vector<std::vector<MP_NOTEINFO>> m_notes;
 

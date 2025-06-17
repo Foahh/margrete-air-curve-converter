@@ -8,7 +8,7 @@
 
 #include <format>
 
-#include "Margrete.h"
+#include "MargreteHandle.h"
 
 void Interpolator::InterpolateChain(const size_t idx) {
     if (idx >= static_cast<int>(m_cctx.chains.size())) {
@@ -174,7 +174,7 @@ void Interpolator::Clamp(MP_NOTEINFO &note) {
     note.width = std::max(1, std::min(note.width, 16 - note.x));
 }
 
-void Interpolator::CommitChart(const Margrete &mg) const {
+void Interpolator::CommitChart(const MargreteHandle &mg) const {
     if (m_notes.empty()) {
         return;
     }

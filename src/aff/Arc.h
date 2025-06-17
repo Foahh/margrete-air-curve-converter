@@ -18,13 +18,10 @@ namespace aff {
         int type{0};
         bool trace{false};
 
-        int Duration() const;
-        bool CanLinkWith(const Arc &other) const;
+        int Duration() const { return toT - t; }
+
+        bool CanLinkWith(const Arc &other) const {
+            return type == other.type && trace == other.trace && toX == other.x && toY == other.y && toT == other.t;
+        }
     };
-
-    inline int Arc::Duration() const { return toT - t; }
-
-    inline bool Arc::CanLinkWith(const Arc &other) const {
-        return type == other.type && trace == other.trace && toX == other.x && toY == other.y && toT == other.t;
-    }
 } // namespace aff

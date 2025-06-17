@@ -12,11 +12,11 @@ public:
     explicit operator bool() const { return this->get() != nullptr; }
 };
 
-class Margrete {
+class MargreteHandle {
 public:
-    Margrete(const Margrete &) = delete;
-    Margrete &operator=(const Margrete &) = delete;
-    explicit Margrete(IMargretePluginContext *ctx = nullptr);
+    MargreteHandle(const MargreteHandle &) = delete;
+    MargreteHandle &operator=(const MargreteHandle &) = delete;
+    explicit MargreteHandle(IMargretePluginContext *ctx = nullptr);
 
     MpBoolean CanCommit() const;
     MgComPtr<IMargretePluginChart> GetChart() const;
