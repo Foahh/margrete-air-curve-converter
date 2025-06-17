@@ -179,7 +179,7 @@ HRESULT Dialog::ShowDialog() {
         return E_FAIL;
     }
 
-    RECT rect = {0, 0, 525, 491};
+    RECT rect = {0, 0, 539, 491};
     Create(hwnd, rect, W_EN_TITLE, WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
     CenterWindow();
     ShowWindow(SW_SHOW);
@@ -334,7 +334,7 @@ void Dialog::UI_Panel_Config_Import() {
 }
 
 void Dialog::UI_Panel_Editor_Chain() const {
-    ImGui::Text("Note [%d]", m_selChain);
+    ImGui::Text("Edit Note [%d]", m_selChain);
 
     ImGui::BeginChild("##NoteBeginEdit", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
     ImGui::PushItemWidth(100.0f);
@@ -351,7 +351,7 @@ void Dialog::UI_Panel_Editor_Chain() const {
 }
 
 void Dialog::UI_Panel_Editor_Control() const {
-    ImGui::Text("Control [%d] @ Note [%d]", m_selControl, m_selChain);
+    ImGui::Text("Edit Control [%d] @ Note [%d]", m_selControl, m_selChain);
     ImGui::BeginChild("##NoteControlEdit", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
     ImGui::PushItemWidth(100.0f);
     if (m_selControl >= 0 && m_selControl < static_cast<int>(m_cctx.chains[m_selChain].size())) {
@@ -478,7 +478,7 @@ void Dialog::UI_Panel_Selector_Chains() {
         ImGui::PopStyleColor(3);
     };
 
-    ImGui::TextUnformatted("Notes");
+    ImGui::TextUnformatted("Select Notes");
     ImGui::BeginChild("##NoteSelector", {m_childWidth, m_childHeight}, ImGuiChildFlags_Border);
     UI_Component_Editor_Vector(m_selChain, m_cctx.chains, creator, labeler, extra);
     ImGui::EndChild();
@@ -523,7 +523,7 @@ void Dialog::UI_Panel_Selector_Controls() {
         ImGui::EndDisabled();
     };
 
-    ImGui::Text("Controls @ Note [%d]", m_selChain);
+    ImGui::Text("Select Controls @ Note [%d]", m_selChain);
     ImGui::BeginChild("##ControlSelector", {m_childWidth, m_childHeight}, ImGuiChildFlags_Border);
 
     if (m_selChain >= 0 && m_selChain < static_cast<int>(m_cctx.chains.size()) &&
@@ -534,7 +534,6 @@ void Dialog::UI_Panel_Selector_Controls() {
             std::string eY = idx == note.size() - 1 ? "--" : GetModeString(n.eY).data();
             return std::format("[{}] {}{} ({},{}) @ {}", idx, eX, eY, n.x, n.y, n.t);
         };
-        const auto title = std::format("Controls @ Note [{}]", m_selChain);
         UI_Component_Editor_Vector(m_selControl, note, creator, labeler, extra, false, 2);
     } else {
         m_selControl = -1;
