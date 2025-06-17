@@ -75,6 +75,7 @@ function(build_main_library)
             src/mgxc/Interpolator.cpp
             src/mgxc/EasingSolver.cpp
             src/mgxc/Margrete.cpp
+            src/Plugin.cpp
             ${CMAKE_CURRENT_BINARY_DIR}/include/version.rc
     )
     target_link_libraries(main PRIVATE common)
@@ -89,6 +90,7 @@ function(build_tests)
             src/mgxc/Interpolator.cpp
             src/mgxc/EasingSolver.cpp
             src/mgxc/Margrete.cpp
+            src/Plugin.cpp
     )
 
     find_package(Catch2 CONFIG REQUIRED)

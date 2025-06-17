@@ -137,7 +137,7 @@ LRESULT Dialog::OnDropFiles(UINT, const WPARAM wParam, LPARAM, BOOL &) {
     return 0;
 }
 
-Dialog::Dialog(Config &cctx, IMargretePluginContext *p_ctx) : m_mg(p_ctx), m_cctx(cctx) {}
+Dialog::Dialog(Config &cctx, IMargretePluginContext *p_ctx, std::stop_token st) : m_mg(p_ctx), m_cctx(cctx), m_st(st) {}
 
 LRESULT Dialog::OnCreate(UINT, WPARAM, LPARAM, BOOL &) {
     CreateDeviceD3D();
@@ -187,6 +187,11 @@ void Dialog::ShowImGuiLoop() {
 
     MSG msg{};
     while (m_running && IsWindow()) {
+        if (m_st.stop_requested()) {
+            m_running = false;
+            break;
+        }
+
         while (PeekMessage(&msg, nullptr, 0u, 0u, PM_REMOVE)) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);

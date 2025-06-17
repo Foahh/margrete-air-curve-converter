@@ -30,7 +30,7 @@ Margrete::Margrete(IMargretePluginContext *ctx) {
 
 MpBoolean Margrete::CanCommit() const { return m_ctx && m_doc && m_undo; }
 
-MyComPtr<IMargretePluginChart> Margrete::GetChart() const {
+MgComPtr<IMargretePluginChart> Margrete::GetChart() const {
     if (!m_ctx) {
         throw std::runtime_error("IMargretePluginContext is not initialized");
     }
@@ -39,7 +39,7 @@ MyComPtr<IMargretePluginChart> Margrete::GetChart() const {
         throw std::runtime_error("IMargretePluginDocument is not initialized");
     }
 
-    MyComPtr<IMargretePluginChart> chart;
+    MgComPtr<IMargretePluginChart> chart;
     const auto result = m_doc->getChart(chart.put());
     if (result != MP_TRUE) {
         throw std::runtime_error("Failed to get IMargretePluginChart from IMargretePluginDocument");

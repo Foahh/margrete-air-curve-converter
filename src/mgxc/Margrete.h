@@ -4,18 +4,11 @@
 #include <windows.h>
 
 template<typename T>
-class MyComPtr : public MargreteComPtr<T> {
+class MgComPtr : public MargreteComPtr<T> {
     using Base = MargreteComPtr<T>;
 
 public:
     using Base::get;
-
-    explicit MyComPtr(T *p = nullptr) : Base(p) {
-        if (p) {
-            p->addRef();
-        }
-    }
-
     explicit operator bool() const { return this->get() != nullptr; }
 };
 
@@ -26,7 +19,7 @@ public:
     explicit Margrete(IMargretePluginContext *ctx = nullptr);
 
     MpBoolean CanCommit() const;
-    MyComPtr<IMargretePluginChart> GetChart() const;
+    MgComPtr<IMargretePluginChart> GetChart() const;
     MpInteger GetTickOffset() const;
 
     void BeginRecording() const;
@@ -37,6 +30,6 @@ public:
 private:
     mutable std::shared_mutex m_mutex;
     IMargretePluginContext *m_ctx{nullptr};
-    MyComPtr<IMargretePluginDocument> m_doc{nullptr};
-    MyComPtr<IMargretePluginUndoBuffer> m_undo{nullptr};
+    MgComPtr<IMargretePluginDocument> m_doc{nullptr};
+    MgComPtr<IMargretePluginUndoBuffer> m_undo{nullptr};
 };

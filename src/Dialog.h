@@ -28,10 +28,19 @@ public:
 
     Dialog(const Dialog &) = delete;
     Dialog &operator=(const Dialog &) = delete;
-    explicit Dialog(Config &cctx, IMargretePluginContext *p_ctx);
+    explicit Dialog(Config &cctx, IMargretePluginContext *p_ctx, std::stop_token st);
 
 private:
-    // Margrete
+    // State
+    bool m_running{false};
+    std::stop_token m_st;
+
+    float m_childWidth{250.0f};
+    float m_childHeight{165.0f};
+
+    int m_selChain{-1};
+    int m_selControl{-1};
+
     Margrete m_mg;
     Config &m_cctx;
 
@@ -54,13 +63,6 @@ private:
     template<class F, class... Args>
     bool Catch(F &&f, Args &&...args);
     void Convert(int idx = -1);
-
-    // State
-    float m_childWidth{250.0f};
-    float m_childHeight{165.0f};
-    bool m_running{false};
-    int m_selChain{-1};
-    int m_selControl{-1};
 
     // UI
     void UI_Main();

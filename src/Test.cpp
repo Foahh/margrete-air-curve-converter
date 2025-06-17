@@ -38,12 +38,12 @@ TEST_CASE("Parse & Interpolate") {
 }
 
 TEST_CASE("Show Once") {
-    static auto g_dlg = std::make_unique<Dialog>(g_cctx, nullptr);
+    static auto g_dlg = std::make_unique<Dialog>(g_cctx, nullptr, std::stop_token{});
     REQUIRE(g_dlg->ShowDialog() == S_OK);
 }
 
 TEST_CASE("Show Multiple Times") {
-    static auto g_dlg = std::make_unique<Dialog>(g_cctx, nullptr);
+    static auto g_dlg = std::make_unique<Dialog>(g_cctx, nullptr, std::stop_token{});
 
     REQUIRE(g_dlg->ShowDialog() == S_OK);
     REQUIRE(g_dlg->ShowDialog() == S_OK);
