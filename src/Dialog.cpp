@@ -16,11 +16,15 @@
 #include "Dialog.h"
 
 #include <array>
+#include <utility>
 
 #include "aff/Parser.h"
 #include "meta.h"
 #include "mgxc/EasingSolver.h"
 #include "mgxc/Interpolator.h"
+
+Dialog::Dialog(Config &cctx, IMargretePluginContext *p_ctx, std::stop_token st) :
+    m_st(std::move(st)), m_mg(p_ctx), m_cctx(cctx) {}
 
 #pragma region DirectX
 
@@ -89,7 +93,7 @@ void Dialog::CleanupDeviceD3D() {
 
 #pragma endregion DirectX
 
-#pragma region Initialization
+#pragma region Win32
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -137,7 +141,6 @@ LRESULT Dialog::OnDropFiles(UINT, const WPARAM wParam, LPARAM, BOOL &) {
     return 0;
 }
 
-Dialog::Dialog(Config &cctx, IMargretePluginContext *p_ctx, std::stop_token st) : m_mg(p_ctx), m_cctx(cctx), m_st(st) {}
 
 LRESULT Dialog::OnCreate(UINT, WPARAM, LPARAM, BOOL &) {
     CreateDeviceD3D();
@@ -166,6 +169,10 @@ LRESULT Dialog::OnDestroy(UINT, WPARAM, LPARAM, BOOL &) {
     return 0;
 }
 
+#pragma endregion Win32
+
+#pragma region Dialog
+
 HRESULT Dialog::ShowDialog() {
     const auto hwnd = m_mg.GetHWND();
     if (hwnd != nullptr && !::IsWindow(hwnd)) {
@@ -177,12 +184,12 @@ HRESULT Dialog::ShowDialog() {
     CenterWindow();
     ShowWindow(SW_SHOW);
     UpdateWindow();
-    ShowImGuiLoop();
+    RenderImGui();
     DestroyWindow();
     return S_OK;
 }
 
-void Dialog::ShowImGuiLoop() {
+void Dialog::RenderImGui() {
     m_running = true;
 
     MSG msg{};
@@ -196,6 +203,7 @@ void Dialog::ShowImGuiLoop() {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
+
         if (!m_running) {
             break;
         }
@@ -206,30 +214,29 @@ void Dialog::ShowImGuiLoop() {
 
         if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             m_running = false;
+            break;
         }
+
+        UI_Error();
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
 
-        constexpr ImGuiWindowFlags flags =
-                ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize;
-
-        if (ImGui::Begin(EN_TITLE, &m_running, flags)) {
+        if (ImGui::Begin(EN_TITLE, &m_running,
+                         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize)) {
             UI_Main();
-            ImGui::End();
-            ImGui::Render();
+        }
 
-            constexpr float clear[4]{0.45f, 0.55f, 0.60f, 1.0f};
-            m_pd3dContext->OMSetRenderTargets(1, &m_mainRenderTargetView, nullptr);
-            m_pd3dContext->ClearRenderTargetView(m_mainRenderTargetView, clear);
-            ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+        ImGui::End();
+        ImGui::Render();
 
-            if (FAILED(m_pSwapChain->Present(1, 0))) {
-                m_running = false;
-            }
-        } else {
-            ImGui::End();
-            break;
+        constexpr float clear[4]{0.45f, 0.55f, 0.60f, 1.0f};
+        m_pd3dContext->OMSetRenderTargets(1, &m_mainRenderTargetView, nullptr);
+        m_pd3dContext->ClearRenderTargetView(m_mainRenderTargetView, clear);
+        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+        if (FAILED(m_pSwapChain->Present(1, 0))) {
+            m_running = false;
         }
     }
 }
@@ -238,16 +245,27 @@ void Dialog::ShowImGuiLoop() {
 
 #pragma region UI
 
-template<class F, class... Args>
-bool Dialog::Catch(F &&f, Args &&...args) {
-    try {
-        std::forward<F>(f)(std::forward<Args>(args)...);
-        return true;
-    } catch (const std::exception &e) {
-        std::wstring w_err;
-        w_err.assign(e.what(), e.what() + strlen(e.what()));
-        MessageBox(w_err.c_str(), W_EN_TITLE, MB_ICONERROR | MB_OK);
-        return false;
+void Dialog::UI_Error() {
+    const auto *vp = ImGui::GetMainViewport();
+    const float w = vp->Size.x * 0.5f;
+    const auto pos = ImVec2(vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f);
+
+    ImGui::SetNextWindowSize(ImVec2(w, 0.0f), ImGuiCond_Appearing);
+    ImGui::SetNextWindowPos(pos, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    if (m_showErrorPopup) {
+        ImGui::OpenPopup("Error##Modal");
+        m_showErrorPopup = false;
+    }
+
+    if (ImGui::BeginPopupModal("Error##Modal", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize)) {
+        ImGui::TextWrapped("%s", m_errorText.c_str());
+        ImGui::Separator();
+
+        if (ImGui::Button("OK", ImVec2(-FLT_MIN, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
     }
 }
 
@@ -283,13 +301,11 @@ void Dialog::UI_Main() {
 
         ImGui::TableNextRow();
 
-        // -------------------- Column 1 --------------------
         ImGui::TableSetColumnIndex(0);
         ImGui::BeginGroup();
         UI_Main_Column_1();
         ImGui::EndGroup();
 
-        // -------------------- Column 2 --------------------
         ImGui::TableSetColumnIndex(1);
         ImGui::BeginGroup();
         UI_Main_Column_2();
@@ -655,6 +671,7 @@ void Dialog::UI_Component_Combo_Division() const {
 
     ImGui::PopItemWidth();
 }
+
 void Dialog::UI_Component_Combo_Easing() const {
     auto &[m_kind, m_exponent, m_epsilon] = m_cctx.solver;
     static const char *esTypeNames[] = {"Sine", "Power", "Circular"};
@@ -679,6 +696,7 @@ void Dialog::UI_Component_Combo_Easing() const {
         m_epsilon = std::clamp(m_epsilon, 0.0, 1.0);
     }
 }
+
 void Dialog::UI_Panel_Config_Convert() const {
     ImGui::TextUnformatted("Convert Config");
     ImGui::BeginChild("##Config", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
@@ -703,6 +721,22 @@ void Dialog::UI_Panel_Config_Convert() const {
     ImGui::EndChild();
 }
 
+#pragma endregion UI
+
+#pragma region Helper
+
+template<class F, class... Args>
+bool Dialog::Catch(F &&f, Args &&...args) {
+    try {
+        std::forward<F>(f)(std::forward<Args>(args)...);
+        return true;
+    } catch (const std::exception &e) {
+        m_errorText = e.what();
+        m_showErrorPopup = true;
+        return false;
+    }
+}
+
 void Dialog::Convert(const int idx) {
     Catch([this, idx] {
         m_cctx.tOffset = m_mg.GetTickOffset();
@@ -712,4 +746,6 @@ void Dialog::Convert(const int idx) {
     });
 }
 
-#pragma endregion UI
+bool Dialog::IsRunning() const noexcept { return m_running; }
+
+#pragma endregion Helper

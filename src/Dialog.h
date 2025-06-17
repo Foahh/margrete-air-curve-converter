@@ -25,12 +25,17 @@ public:
     END_MSG_MAP()
 
     HRESULT ShowDialog();
+    void UI_Error();
 
     Dialog(const Dialog &) = delete;
     Dialog &operator=(const Dialog &) = delete;
     explicit Dialog(Config &cctx, IMargretePluginContext *p_ctx, std::stop_token st);
 
+    bool IsRunning() const noexcept;
+
 private:
+    void RenderImGui();
+
     // State
     bool m_running{false};
     std::stop_token m_st;
@@ -44,12 +49,14 @@ private:
     MargreteHandle m_mg;
     Config &m_cctx;
 
+    bool m_showErrorPopup = false;
+    std::string m_errorText;
+
     // Win32
     LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL &);
     LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL &);
     LRESULT OnRange(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL &bHandled) const;
     LRESULT OnDropFiles(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
-    void ShowImGuiLoop();
 
     // DirectX
     ID3D11Device *m_pd3dDevice = nullptr;
