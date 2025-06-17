@@ -288,9 +288,6 @@ void Dialog::UI_Main() {
         UI_Panel_Config();
         ImGui::EndChild();
 
-        ImGui::Spacing();
-        ImGui::TextUnformatted("Support Drag & Drop *.aff");
-
         ImGui::EndGroup();
         ImGui::EndTable();
     }
@@ -424,6 +421,10 @@ void Dialog::UI_Panel_Selector_Chain() {
     };
 
     const auto extra = [this] {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.0f, 0.0f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.0f, 0.0f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.0f, 0.0f, 1.0f));
+
         ImGui::SameLine();
         ImGui::BeginDisabled(!m_mg.CanCommit() || m_selChain < 0 ||
                              m_selChain >= static_cast<int>(m_cctx.chains.size()));
@@ -438,6 +439,8 @@ void Dialog::UI_Panel_Selector_Chain() {
             ConvertAction();
         }
         ImGui::EndDisabled();
+
+        ImGui::PopStyleColor(3);
     };
 
     UI_Panel_Editor_Vector("Select Chains", "##ChainSelector", m_cctx.chains, m_selChain, creator, labeler, extra);
