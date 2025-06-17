@@ -1,4 +1,4 @@
-# Air-Curve Converter Plugin for Margrete
+# Air Curve Converter Plugin for Margrete
 
 Convert **Curve** patterns to `Slide`, `AirSlide`, and `AirCrush` notes – with optional import from `.aff` charts.
 
