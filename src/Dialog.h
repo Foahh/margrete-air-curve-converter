@@ -53,30 +53,34 @@ private:
     // Helper
     template<class F, class... Args>
     bool Catch(F &&f, Args &&...args);
-    void UI_Panel_Import();
+    void Convert(int idx = -1);
 
     // State
     float m_childWidth{250.0f};
     float m_childHeight{165.0f};
     bool m_running{false};
     int m_selChain{-1};
-    int m_selNote{-1};
+    int m_selControl{-1};
 
     // UI
     void UI_Main();
-    void UI_Panel_Editor_Note() const;
-    void UI_Panel_Selector_Chain();
-    void UI_Button_File();
-    static void UI_Panel_Note_Edit(std::vector<mgxc::Note> &chain);
-    static void UI_Combo_EasingMode(const std::string_view &label, EasingMode &esMode);
-    void UI_Panel_Snap() const;
-    void UI_Panel_Config() const;
-    void UI_Combo_EasingType() const;
-    void UI_Panel_Selector_Note();
+    void UI_Main_Column_1();
+    void UI_Main_Column_2();
+
+    void UI_Panel_Config_Import();
+    void UI_Panel_Config_Convert() const;
+
+    void UI_Panel_Selector_Chains();
+    void UI_Panel_Selector_Controls();
+
+    void UI_Panel_Editor_Chain() const;
+    void UI_Panel_Editor_Control() const;
+
+    static void UI_Component_Editor_Chain(std::vector<mgxc::Note> &chain);
+    static void UI_Component_Combo_EasingMode(const std::string_view &label, EasingMode &esMode);
+    void UI_Component_Button_File();
 
     template<class Container, class Creator, class Labeler, class Extra = std::nullptr_t>
-    void UI_Panel_Editor_Vector(const char *title, const char *childId, Container &vec, int &selIndex, Creator creator,
-                                Labeler labeler, Extra extra = nullptr);
-
-    void ConvertAction(int idx = -1);
+    void UI_Component_Editor_Vector(int &selIndex, Container &vec, Creator creator, Labeler labeler,
+                                    Extra extra = nullptr, bool showClear = true, int minItems = 0);
 };

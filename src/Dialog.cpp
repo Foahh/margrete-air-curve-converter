@@ -172,7 +172,7 @@ HRESULT Dialog::ShowDialog() {
         return E_FAIL;
     }
 
-    RECT rect = {0, 0, 525, 520};
+    RECT rect = {0, 0, 525, 491};
     Create(hwnd, rect, W_EN_TITLE, WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
     CenterWindow();
     ShowWindow(SW_SHOW);
@@ -246,6 +246,28 @@ bool Dialog::Catch(F &&f, Args &&...args) {
     }
 }
 
+void Dialog::UI_Main_Column_1() {
+    UI_Panel_Config_Import();
+    ImGui::Spacing();
+
+    UI_Panel_Config_Convert();
+    ImGui::Spacing();
+
+    UI_Panel_Selector_Chains();
+    ImGui::Spacing();
+}
+
+void Dialog::UI_Main_Column_2() {
+    UI_Panel_Selector_Controls();
+    ImGui::Spacing();
+
+    UI_Panel_Editor_Chain();
+    ImGui::Spacing();
+
+    UI_Panel_Editor_Control();
+    ImGui::Spacing();
+}
+
 void Dialog::UI_Main() {
     constexpr ImGuiTableFlags flags =
             ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_SizingFixedFit;
@@ -259,41 +281,19 @@ void Dialog::UI_Main() {
         // -------------------- Column 1 --------------------
         ImGui::TableSetColumnIndex(0);
         ImGui::BeginGroup();
-
-        UI_Panel_Import();
-        ImGui::Spacing();
-
-        UI_Panel_Selector_Chain();
-        ImGui::Spacing();
-        UI_Panel_Selector_Note();
-
+        UI_Main_Column_1();
         ImGui::EndGroup();
 
         // -------------------- Column 2 --------------------
         ImGui::TableSetColumnIndex(1);
         ImGui::BeginGroup();
-
-        UI_Panel_Editor_Note();
-        ImGui::Spacing();
-
-        ImGui::TextUnformatted("Convert Config");
-        ImGui::BeginChild("##Config", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
-
-        UI_Panel_Snap();
-        ImGui::Separator();
-
-        UI_Combo_EasingType();
-        ImGui::Separator();
-
-        UI_Panel_Config();
-        ImGui::EndChild();
-
+        UI_Main_Column_2();
         ImGui::EndGroup();
         ImGui::EndTable();
     }
 }
 
-void Dialog::UI_Panel_Import() {
+void Dialog::UI_Panel_Config_Import() {
     ImGui::TextUnformatted("Import Config");
     ImGui::BeginChild("##Import", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
 
@@ -305,28 +305,36 @@ void Dialog::UI_Panel_Import() {
     m_cctx.til = std::clamp(m_cctx.til, 0, 15);
     ImGui::PopItemWidth();
 
-    UI_Button_File();
+    UI_Component_Button_File();
     ImGui::SameLine();
     ImGui::Checkbox("Append", &m_cctx.append);
 
     ImGui::EndChild();
 }
 
-void Dialog::UI_Panel_Editor_Note() const {
-    ImGui::Text("Selected Note [%d]:[%d]", m_selChain, m_selNote);
-    ImGui::BeginChild("##NoteEdit", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
+void Dialog::UI_Panel_Editor_Chain() const {
+    ImGui::Text("Note [%d]", m_selChain);
+
+    ImGui::BeginChild("##NoteBeginEdit", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
     ImGui::PushItemWidth(100.0f);
 
     if (m_selChain >= 0 && m_selChain < static_cast<int>(m_cctx.chains.size())) {
-        auto &chain = m_cctx.chains[m_selChain];
-        if (!chain.empty()) {
-            UI_Panel_Note_Edit(chain);
+        auto &note = m_cctx.chains[m_selChain];
+        if (!note.empty()) {
+            UI_Component_Editor_Chain(note);
         }
     }
 
-    if (m_selNote >= 0 && m_selNote < static_cast<int>(m_cctx.chains[m_selChain].size())) {
-        ImGui::Separator();
-        auto &note = m_cctx.chains[m_selChain][m_selNote];
+    ImGui::PopItemWidth();
+    ImGui::EndChild();
+}
+
+void Dialog::UI_Panel_Editor_Control() const {
+    ImGui::Text("Control [%d] @ Note [%d]", m_selControl, m_selChain);
+    ImGui::BeginChild("##NoteControlEdit", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
+    ImGui::PushItemWidth(100.0f);
+    if (m_selControl >= 0 && m_selControl < static_cast<int>(m_cctx.chains[m_selChain].size())) {
+        auto &note = m_cctx.chains[m_selChain][m_selControl];
 
         ImGui::InputInt("t", &note.t);
         note.t = std::max(note.t, 0);
@@ -336,33 +344,31 @@ void Dialog::UI_Panel_Editor_Note() const {
 
         ImGui::Separator();
         ImGui::InputInt("x", &note.x);
-        UI_Combo_EasingMode("eX", note.eX);
+        UI_Component_Combo_EasingMode("eX", note.eX);
 
         ImGui::Separator();
         ImGui::InputInt("y [0,360]", &note.y);
         note.y = std::clamp(note.y, 0, 360);
-        UI_Combo_EasingMode("eY", note.eY);
+        UI_Component_Combo_EasingMode("eY", note.eY);
     }
-
     ImGui::PopItemWidth();
     ImGui::EndChild();
 }
 
 template<class Container, class Creator, class Labeler, class Extra>
-void Dialog::UI_Panel_Editor_Vector(const char *title, const char *childId, Container &vec, int &selIndex,
-                                    Creator creator, Labeler labeler, Extra extra) {
-
-    ImGui::TextUnformatted(title);
-    ImGui::BeginChild(childId, {m_childWidth, m_childHeight}, ImGuiChildFlags_Border);
-
+void Dialog::UI_Component_Editor_Vector(int &selIndex, Container &vec, Creator creator, Labeler labeler, Extra extra,
+                                        const bool showClear, const int minItems) {
     if (ImGui::SmallButton("+")) {
         vec.emplace_back(creator());
         selIndex = static_cast<int>(vec.size()) - 1;
     }
     ImGui::SameLine();
 
-    ImGui::BeginDisabled(selIndex < 0 || selIndex >= static_cast<int>(vec.size()));
-    if (ImGui::SmallButton("-")) {
+    const bool canRemove =
+            selIndex >= 0 && selIndex < static_cast<int>(vec.size()) && vec.size() > static_cast<std::size_t>(minItems);
+
+    ImGui::BeginDisabled(!canRemove);
+    if (ImGui::SmallButton("-") && canRemove) {
         vec.erase(vec.begin() + selIndex);
         if (vec.empty()) {
             selIndex = -1;
@@ -373,12 +379,16 @@ void Dialog::UI_Panel_Editor_Vector(const char *title, const char *childId, Cont
     ImGui::EndDisabled();
     ImGui::SameLine();
 
-    ImGui::BeginDisabled(vec.empty());
-    if (ImGui::SmallButton("Clear")) {
-        vec.clear();
-        selIndex = -1;
+    if (showClear) {
+        const bool canClear = vec.size() > static_cast<std::size_t>(minItems);
+
+        ImGui::BeginDisabled(!canClear);
+        if (ImGui::SmallButton("Clear") && canClear) {
+            vec.clear();
+            selIndex = -1;
+        }
+        ImGui::EndDisabled();
     }
-    ImGui::EndDisabled();
 
     if constexpr (!std::is_same_v<Extra, std::nullptr_t>) {
         extra();
@@ -393,7 +403,6 @@ void Dialog::UI_Panel_Editor_Vector(const char *title, const char *childId, Cont
             selIndex = i;
         ImGui::PopID();
     }
-    ImGui::EndChild();
 }
 
 constexpr std::string_view GetNoteTypeString(const MpInteger type) {
@@ -409,8 +418,13 @@ constexpr std::string_view GetNoteTypeString(const MpInteger type) {
     }
 }
 
-void Dialog::UI_Panel_Selector_Chain() {
-    const auto creator = [] { return std::vector<mgxc::Note>{}; };
+void Dialog::UI_Panel_Selector_Chains() {
+    const auto creator = [] {
+        using enum EasingMode;
+        return std::vector{mgxc::Note{MP_NOTETYPE_AIRSLIDE, 0, 0, In, 80, In, 4, 0},
+                           mgxc::Note{MP_NOTETYPE_AIRSLIDE, 960, 12, In, 80, In, 4, 0}};
+    };
+
     const auto labeler = [](std::vector<mgxc::Note> const &c, const int idx) {
         if (c.empty()) {
             return std::format("![{}] Empty", idx);
@@ -429,21 +443,24 @@ void Dialog::UI_Panel_Selector_Chain() {
         ImGui::BeginDisabled(!m_mg.CanCommit() || m_selChain < 0 ||
                              m_selChain >= static_cast<int>(m_cctx.chains.size()));
         if (ImGui::SmallButton("Commit")) {
-            ConvertAction(m_selChain);
+            Convert(m_selChain);
         }
         ImGui::EndDisabled();
 
         ImGui::SameLine();
         ImGui::BeginDisabled(!m_mg.CanCommit() || m_cctx.chains.empty());
         if (ImGui::SmallButton("Commit All") && !m_cctx.chains.empty()) {
-            ConvertAction();
+            Convert();
         }
         ImGui::EndDisabled();
 
         ImGui::PopStyleColor(3);
     };
 
-    UI_Panel_Editor_Vector("Select Chains", "##ChainSelector", m_cctx.chains, m_selChain, creator, labeler, extra);
+    ImGui::TextUnformatted("Notes");
+    ImGui::BeginChild("##NoteSelector", {m_childWidth, m_childHeight}, ImGuiChildFlags_Border);
+    UI_Component_Editor_Vector(m_selChain, m_cctx.chains, creator, labeler, extra);
+    ImGui::EndChild();
 }
 
 constexpr std::string_view GetModeString(const EasingMode mode) {
@@ -460,17 +477,17 @@ constexpr std::string_view GetModeString(const EasingMode mode) {
     }
 }
 
-void Dialog::UI_Panel_Selector_Note() {
+void Dialog::UI_Panel_Selector_Controls() {
     const auto creator = [this] {
-        mgxc::Note note{};
+        mgxc::Note control{};
         if (m_selChain >= 0 && m_selChain < static_cast<int>(m_cctx.chains.size())) {
-            const auto &chain = m_cctx.chains[m_selChain];
-            if (m_selNote >= 0 && m_selNote < static_cast<int>(chain.size())) {
-                note = chain[m_selNote];
-                note.t += m_cctx.snap;
+            const auto &note = m_cctx.chains[m_selChain];
+            if (m_selControl >= 0 && m_selControl < static_cast<int>(note.size())) {
+                control = note[m_selControl];
+                control.t += m_cctx.snap;
             }
         }
-        return note;
+        return control;
     };
 
     const auto extra = [this] {
@@ -479,28 +496,34 @@ void Dialog::UI_Panel_Selector_Note() {
         ImGui::BeginDisabled(m_selChain < 0 || m_selChain >= static_cast<int>(m_cctx.chains.size()) ||
                              m_cctx.chains[m_selChain].empty());
         if (ImGui::SmallButton("Sort") && m_selChain >= 0 && m_selChain < static_cast<int>(m_cctx.chains.size())) {
-            auto &chain = m_cctx.chains[m_selChain];
-            std::ranges::sort(chain);
+            auto &note = m_cctx.chains[m_selChain];
+            std::ranges::sort(note);
         }
         ImGui::EndDisabled();
     };
 
+    ImGui::Text("Controls @ Note [%d]", m_selChain);
+    ImGui::BeginChild("##ControlSelector", {m_childWidth, m_childHeight}, ImGuiChildFlags_Border);
+
     if (m_selChain >= 0 && m_selChain < static_cast<int>(m_cctx.chains.size()) &&
-        m_selNote < static_cast<int>(m_cctx.chains[m_selChain].size())) {
-        auto &chain = m_cctx.chains[m_selChain];
-        const auto labeler = [chain](mgxc::Note const &n, int idx) {
-            std::string eX = idx == chain.size() - 1 ? "--" : GetModeString(n.eX).data();
-            std::string eY = idx == chain.size() - 1 ? "--" : GetModeString(n.eY).data();
+        m_selControl < static_cast<int>(m_cctx.chains[m_selChain].size())) {
+        auto &note = m_cctx.chains[m_selChain];
+        const auto labeler = [note](mgxc::Note const &n, int idx) {
+            std::string eX = idx == note.size() - 1 ? "--" : GetModeString(n.eX).data();
+            std::string eY = idx == note.size() - 1 ? "--" : GetModeString(n.eY).data();
             return std::format("[{}] {}{} ({},{}) @ {}", idx, eX, eY, n.x, n.y, n.t);
         };
-        UI_Panel_Editor_Vector("Select Notes", "##NoteSelector", chain, m_selNote, creator, labeler, extra);
+        const auto title = std::format("Controls @ Note [{}]", m_selChain);
+        UI_Component_Editor_Vector(m_selControl, note, creator, labeler, extra, false, 2);
     } else {
-        m_selNote = -1;
+        m_selControl = -1;
     }
+
+    ImGui::EndChild();
 }
 
-void Dialog::UI_Button_File() {
-    if (!ImGui::Button("Open")) {
+void Dialog::UI_Component_Button_File() {
+    if (!ImGui::Button("Import *.aff")) {
         return;
     }
 
@@ -527,18 +550,18 @@ void Dialog::UI_Button_File() {
     });
 }
 
-void Dialog::UI_Panel_Note_Edit(std::vector<mgxc::Note> &chain) {
+void Dialog::UI_Component_Editor_Chain(std::vector<mgxc::Note> &chain) {
     auto width = chain.front().width;
     if (ImGui::InputInt("Width [1,16]", &width)) {
-        for (auto &n: chain) {
-            n.width = std::clamp(width, 1, 16);
+        for (auto &c: chain) {
+            c.width = std::clamp(width, 1, 16);
         }
     }
 
     auto til = chain.front().til;
     if (ImGui::InputInt("TIL [0,15]", &til)) {
-        for (auto &n: chain) {
-            n.til = std::clamp(til, 0, 15);
+        for (auto &c: chain) {
+            c.til = std::clamp(til, 0, 15);
         }
     }
 
@@ -552,18 +575,18 @@ void Dialog::UI_Panel_Note_Edit(std::vector<mgxc::Note> &chain) {
     auto current = static_cast<int>(std::distance(kItems.begin(), it));
     if (current >= static_cast<int>(kItems.size())) {
         current = 0;
-        for (auto &n: chain) {
-            n.type = kItems[current].first;
+        for (auto &c: chain) {
+            c.type = kItems[current].first;
         }
     }
 
-    if (ImGui::BeginCombo("Type", kItems[current].second.data())) {
+    if (ImGui::BeginCombo("Note Type", kItems[current].second.data())) {
         for (std::size_t i = 0; i < kItems.size(); ++i) {
             const bool selected = i == static_cast<std::size_t>(current);
             if (ImGui::Selectable(kItems[i].second.data(), selected)) {
                 current = static_cast<int>(i);
-                for (auto &n: chain) {
-                    n.type = kItems[current].first;
+                for (auto &c: chain) {
+                    c.type = kItems[current].first;
                 }
             }
             if (selected) {
@@ -575,7 +598,7 @@ void Dialog::UI_Panel_Note_Edit(std::vector<mgxc::Note> &chain) {
 }
 
 
-void Dialog::UI_Combo_EasingMode(const std::string_view &label, EasingMode &esMode) {
+void Dialog::UI_Component_Combo_EasingMode(const std::string_view &label, EasingMode &esMode) {
     static const char *esModeNames[] = {"Linear", "In", "Out"};
     auto esModeInt = static_cast<int>(esMode);
     if (ImGui::Combo(label.data(), &esModeInt, esModeNames, IM_ARRAYSIZE(esModeNames))) {
@@ -583,82 +606,86 @@ void Dialog::UI_Combo_EasingMode(const std::string_view &label, EasingMode &esMo
     }
 }
 
-void Dialog::UI_Combo_EasingType() const {
-    auto &[m_kind, m_exponent, m_epsilon] = m_cctx.solver;
-    static const char *esTypeNames[] = {"Sine", "Power", "Circular"};
-    auto esTypeInt = static_cast<int>(m_kind);
+void Dialog::UI_Panel_Config_Convert() const {
+    ImGui::TextUnformatted("Convert Config");
+    ImGui::BeginChild("##Config", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
 
+    // Division
+    {
+        static const std::vector snapDivisors = {1920, 960, 480, 384, 192, 128, 96, 64, 48, 32, 24, 16, 12, 8, 4};
+        int selectedDivisorIndex = -1;
+        if (m_cctx.snap > 0 && mgxc::BAR_TICKS % m_cctx.snap == 0) {
+            const int divisor = mgxc::BAR_TICKS / m_cctx.snap;
+            const auto it = std::ranges::find(snapDivisors, divisor);
+            if (it != snapDivisors.end()) {
+                selectedDivisorIndex = static_cast<int>(std::distance(snapDivisors.begin(), it));
+            }
+        }
+
+        std::string previewStr;
+        if (selectedDivisorIndex >= 0) {
+            previewStr = std::to_string(snapDivisors[selectedDivisorIndex]);
+        }
+
+        ImGui::PushItemWidth(55.0f);
+
+        if (ImGui::BeginCombo("=", previewStr.c_str())) {
+            for (int i = 0; i < snapDivisors.size(); i++) {
+                const bool isSelected = selectedDivisorIndex == i;
+                if (ImGui::Selectable(std::to_string(snapDivisors[i]).c_str(), isSelected)) {
+                    m_cctx.snap = mgxc::BAR_TICKS / snapDivisors[i];
+                }
+
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        ImGui::PopItemWidth();
+        ImGui::PushItemWidth(85.0f);
+        ImGui::SameLine();
+
+        int snapInput = m_cctx.snap;
+        if (ImGui::InputInt("Division", &snapInput)) {
+            snapInput = std::clamp(snapInput, 1, mgxc::BAR_TICKS);
+            m_cctx.snap = snapInput;
+        }
+
+        ImGui::PopItemWidth();
+    }
+
+    ImGui::Separator();
     ImGui::PushItemWidth(100.0f);
 
-    if (ImGui::Combo("Easing", &esTypeInt, esTypeNames, IM_ARRAYSIZE(esTypeNames))) {
-        m_kind = static_cast<EasingKind>(esTypeInt);
-    }
+    // Easing
+    {
+        auto &[m_kind, m_exponent, m_epsilon] = m_cctx.solver;
+        static const char *esTypeNames[] = {"Sine", "Power", "Circular"};
+        auto esTypeInt = static_cast<int>(m_kind);
 
-    if (m_kind == EasingKind::Power) {
-        const int prev = m_exponent;
-        ImGui::InputInt("Exponent [!=0]", &m_exponent);
-        if (m_exponent == 0) {
-            if (prev > m_exponent) {
-                m_exponent = -1;
-            } else {
-                m_exponent = 1;
-            }
+        if (ImGui::Combo("Easing", &esTypeInt, esTypeNames, IM_ARRAYSIZE(esTypeNames))) {
+            m_kind = static_cast<EasingKind>(esTypeInt);
         }
-    } else if (m_kind == EasingKind::Circular) {
-        ImGui::InputDouble("Linearity [0,1]", &m_epsilon, 0.01, 0.1, "%.3f");
-        m_epsilon = std::clamp(m_epsilon, 0.0, 1.0);
-    }
 
-    ImGui::PopItemWidth();
-}
-
-void Dialog::UI_Panel_Snap() const {
-    static const std::vector snapDivisors = {1920, 960, 480, 384, 192, 128, 96, 64, 48, 32, 24, 16, 12, 8, 4};
-    int selectedDivisorIndex = -1;
-    if (m_cctx.snap > 0 && mgxc::BAR_TICKS % m_cctx.snap == 0) {
-        const int divisor = mgxc::BAR_TICKS / m_cctx.snap;
-        const auto it = std::ranges::find(snapDivisors, divisor);
-        if (it != snapDivisors.end()) {
-            selectedDivisorIndex = static_cast<int>(std::distance(snapDivisors.begin(), it));
+        if (m_kind == EasingKind::Power) {
+            const int prev = m_exponent;
+            ImGui::InputInt("Exponent [!=0]", &m_exponent);
+            if (m_exponent == 0) {
+                if (prev > m_exponent) {
+                    m_exponent = -1;
+                } else {
+                    m_exponent = 1;
+                }
+            }
+        } else if (m_kind == EasingKind::Circular) {
+            ImGui::InputDouble("Linearity [0,1]", &m_epsilon, 0.01, 0.1, "%.3f");
+            m_epsilon = std::clamp(m_epsilon, 0.0, 1.0);
         }
     }
 
-    std::string previewStr;
-    if (selectedDivisorIndex >= 0) {
-        previewStr = std::to_string(snapDivisors[selectedDivisorIndex]);
-    }
-
-    ImGui::PushItemWidth(55.0f);
-
-    if (ImGui::BeginCombo("=", previewStr.c_str())) {
-        for (int i = 0; i < snapDivisors.size(); i++) {
-            const bool isSelected = selectedDivisorIndex == i;
-            if (ImGui::Selectable(std::to_string(snapDivisors[i]).c_str(), isSelected)) {
-                m_cctx.snap = mgxc::BAR_TICKS / snapDivisors[i];
-            }
-
-            if (isSelected) {
-                ImGui::SetItemDefaultFocus();
-            }
-        }
-        ImGui::EndCombo();
-    }
-
-    ImGui::PopItemWidth();
-    ImGui::PushItemWidth(85.0f);
-    ImGui::SameLine();
-
-    int snapInput = m_cctx.snap;
-    if (ImGui::InputInt("Division", &snapInput)) {
-        snapInput = std::clamp(snapInput, 1, mgxc::BAR_TICKS);
-        m_cctx.snap = snapInput;
-    }
-
-    ImGui::PopItemWidth();
-}
-
-void Dialog::UI_Panel_Config() const {
-    ImGui::PushItemWidth(100.0f);
+    ImGui::Separator();
 
     ImGui::InputInt("x Offset [±15]", &m_cctx.xOffset);
     m_cctx.xOffset = std::clamp(m_cctx.xOffset, -15, 15);
@@ -669,9 +696,10 @@ void Dialog::UI_Panel_Config() const {
     ImGui::Checkbox("Clamp (x,y)", &m_cctx.clamp);
 
     ImGui::PopItemWidth();
+    ImGui::EndChild();
 }
 
-void Dialog::ConvertAction(const int idx) {
+void Dialog::Convert(const int idx) {
     Catch([this, idx] {
         m_cctx.tOffset = m_mg.GetTickOffset();
         auto intp = Interpolator(m_cctx);
