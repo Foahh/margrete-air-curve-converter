@@ -1,9 +1,12 @@
 # Air-Curve Converter Plugin for Margrete
 
-Convert **Curve** patterns to  
-`Slide`, `AirSlide`, and `AirCrush` notes – with optional import from `.aff` charts.
+Convert **Curve** patterns to `Slide`, `AirSlide`, and `AirCrush` notes – with optional import from `.aff` charts.
 
 ---
+
+## Preview
+
+![preview.png](assets/preview.png)
 
 ## Usage
 
@@ -28,7 +31,7 @@ cd margrete-air-curve-converter
 
 | Tool                            | How to get it                                                                                                                                                                                                   |
 |---------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **MSVC (Microsoft Visual C++)** | • Launch **Visual Studio Installer**.<br>• Select the **Desktop development with C++** workload.<br>  - *or* -<br>• Install **MSVC Build Tools** + **Windows SDK** only (no full VS IDE required).              |
+| **MSVC (Microsoft Visual C++)** | • Launch **Visual Studio Installer**.<br>• Select the **Desktop development with C++**.<br>  - *or* -<br>• Install **MSVC Build Tools** + **Windows SDK** only (no full VS IDE required).                       |
 | **vcpkg**                       | • In **Visual Studio Installer**, tick the **vcpkg** component.<br>  - *or* -<br>• Install manually through [Tutorial](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-powershell) |
 
 ### 3. Run the build script
