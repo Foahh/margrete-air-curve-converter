@@ -134,13 +134,13 @@ namespace aff {
                 n.y = arc.y;
                 n.eY = arc.eY;
 
-                notes.push_back(n);
+                notes.push_back(std::move(n));
 
                 if (i == chain.size() - 1) {
                     n.t = arc.toT;
                     n.x = arc.toX;
                     n.y = arc.toY;
-                    notes.push_back(n);
+                    notes.push_back(std::move(n));
                 }
             }
             chains.push_back(std::move(notes));
