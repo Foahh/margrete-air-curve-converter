@@ -180,7 +180,7 @@ HRESULT Dialog::ShowDialog() {
     }
 
     RECT rect = {0, 0, 539, 491};
-    Create(hwnd, rect, W_EN_TITLE, WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
+    Create(hwnd, rect, W_DIALOG_TITLE, WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
     CenterWindow();
     ShowWindow(SW_SHOW);
     UpdateWindow();
@@ -222,7 +222,7 @@ void Dialog::RenderImGui() {
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
 
-        if (ImGui::Begin(EN_TITLE, &m_running,
+        if (ImGui::Begin(DIALOG_TITLE, &m_running,
                          ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize)) {
             UI_Main();
         }
