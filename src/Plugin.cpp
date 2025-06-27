@@ -44,9 +44,11 @@ MpBoolean Plugin::invoke(IMargretePluginContext *p_ctx) {
     m_worker = std::jthread([this, p_ctx](const std::stop_token &token) {
         try {
             Dialog dlg(m_cctx, p_ctx, token);
-            dlg.ShowDialog();
+            if (FAILED(dlg.ShowDialog())) {
+                throw std::runtime_error("Failed to show plugin dialog...");
+            }
         } catch (const std::exception &e) {
-            std::wstring wmsg(e.what(), e.what() + std::strlen(e.what()));
+            const std::wstring wmsg(e.what(), e.what() + std::strlen(e.what()));
             MessageBoxW(nullptr, wmsg.c_str(), L"Error", MB_ICONERROR | MB_OK);
         } catch (...) { MessageBoxW(nullptr, L"Unknown error", L"Error", MB_ICONERROR | MB_OK); }
 
