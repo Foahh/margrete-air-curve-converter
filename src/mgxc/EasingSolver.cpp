@@ -2,12 +2,13 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include <numbers>
 #include <stdexcept>
 
 double EasingSolver::Solve(const double u, const EasingMode mode) const {
     if (u < 0.0 || u > 1.0) {
-        throw std::out_of_range("Input value must be in the range [0.0, 1.0]");
+        throw std::out_of_range(std::format("Value must be in the range [0.0, 1.0], got {}", u));
     }
 
     if (mode == Linear) {
@@ -19,7 +20,7 @@ double EasingSolver::Solve(const double u, const EasingMode mode) const {
 
 double EasingSolver::InverseSolve(const double v, const EasingMode mode) const {
     if (v < 0.0 || v > 1.0) {
-        throw std::out_of_range("Input value must be in the range [0.0, 1.0]");
+        throw std::out_of_range(std::format("Value must be in the range [0.0, 1.0], got {}", v));
     }
 
     if (mode == Linear) {
@@ -34,7 +35,7 @@ double EasingSolver::SolveIn(const double t) const {
         case Sine:
             return std::sin(t * std::numbers::pi_v<double> / 2.0);
         case Power:
-            return 1.0 - std::pow(1.0 - t, m_exponent); // reuse Out
+            return 1.0 - std::pow(1.0 - t, m_exponent);
         case Circular:
             return 1.0 - CircularOut(1.0 - t);
         default:

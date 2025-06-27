@@ -5,6 +5,12 @@
 #include "Config.h"
 #include "MargreteHandle.h"
 
+struct Joint {
+    int x{}, y{}, t{};
+    EasingMode eX{EasingMode::Linear};
+    EasingMode eY{EasingMode::Linear};
+};
+
 class Interpolator {
 public:
     explicit Interpolator(Config &cctx);
@@ -14,16 +20,22 @@ public:
 
     void CommitChart(const MargreteHandle &mg) const;
 
-    std::vector<std::vector<MP_NOTEINFO>> m_notes;
-
 private:
-    Config &m_cctx;
-    void FinalizeSingle(std::vector<MP_NOTEINFO> &chain) const;
+    std::vector<std::vector<MP_NOTEINFO>> m_chains;
+    std::vector<MP_NOTEINFO> m_chain;
 
-    static void Clamp(MP_NOTEINFO &note);
+    Config &m_cctx;
+
     static void CommitChain(const MargreteComPtr<IMargretePluginChart> &p_chart, const std::vector<MP_NOTEINFO> &chain);
     static MargreteComPtr<IMargretePluginNote> CreateNote(const MargreteComPtr<IMargretePluginChart> &p_chart);
-    void InterpolateChain(size_t idx);
 
     void DebugPrint() const;
+
+    void InterpolateChain(size_t idx);
+    static void Clamp(MP_NOTEINFO &note);
+
+    Joint Snap(const mgxc::Note &src) const;
+    void Push(const MP_NOTEINFO &base, const Joint &curr, const Joint &next);
+    void VerticalSegment(MP_NOTEINFO base, const Joint &curr, const Joint &next);
+    void HorizontalSegment(MP_NOTEINFO base, const Joint &curr, const Joint &next);
 };
