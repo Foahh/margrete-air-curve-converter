@@ -70,6 +70,7 @@ private:
     template<class F, class... Args>
     bool Catch(F &&f, Args &&...args);
     void Convert(int idx = -1);
+    void SortChain(std::vector<mgxc::Note> &chain);
 
     // UI
     void UI_Main();
@@ -83,7 +84,7 @@ private:
     void UI_Panel_Selector_Controls();
 
     void UI_Panel_Editor_Chain() const;
-    void UI_Panel_Editor_Control() const;
+    void UI_Panel_Editor_Control();
 
     static void UI_Component_Editor_Chain(std::vector<mgxc::Note> &chain);
     static void UI_Component_Combo_EasingMode(const std::string_view &label, EasingMode &esMode);
@@ -91,7 +92,9 @@ private:
     void UI_Component_Combo_Easing() const;
     void UI_Component_Button_File();
 
-    template<class Container, class Creator, class Labeler, class Extra = std::nullptr_t>
+    template<class Container, class Creator, class Labeler, class Changed = std::nullptr_t,
+             class Extra = std::nullptr_t>
     void UI_Component_Editor_Vector(int &selIndex, Container &vec, Creator creator, Labeler labeler,
-                                    Extra extra = nullptr, bool showClear = true, int minItems = 0);
+                                    Changed changed = nullptr, Extra extra = nullptr, bool showClear = true,
+                                    int minItems = 0);
 };
