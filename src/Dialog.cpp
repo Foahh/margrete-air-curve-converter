@@ -432,11 +432,11 @@ void Dialog::UI_Component_Editor_Vector(int &selIndex, Container &vec, Creator c
         }
     }
     ImGui::EndDisabled();
-    ImGui::SameLine();
 
     if (showClear) {
         const bool canClear = vec.size() > static_cast<std::size_t>(minItems);
 
+        ImGui::SameLine();
         ImGui::BeginDisabled(!canClear);
         if (ImGui::SmallButton("Clear") && canClear) {
             vec.clear();
@@ -550,13 +550,6 @@ void Dialog::UI_Panel_Selector_Controls() {
         return control;
     };
 
-    const auto extra = [this] {
-        ImGui::SameLine();
-        ImGui::BeginDisabled(m_selChain < 0 || m_selChain >= static_cast<int>(m_cctx.chains.size()) ||
-                             m_cctx.chains[m_selChain].empty());
-        ImGui::EndDisabled();
-    };
-
     const auto changed = [this] {
         if (m_selChain >= 0 && m_selChain < static_cast<int>(m_cctx.chains.size()) && m_selControl >= 0 &&
             m_selControl < static_cast<int>(m_cctx.chains[m_selChain].size())) {
@@ -575,7 +568,7 @@ void Dialog::UI_Panel_Selector_Controls() {
             std::string eY = idx == note.size() - 1 ? "--" : GetModeString(n.eY).data();
             return std::format("[{}] {}{} ({},{}) @ {}", idx, eX, eY, n.x, n.y, n.t);
         };
-        UI_Component_Editor_Vector(m_selControl, note, creator, labeler, changed, extra, false, 2);
+        UI_Component_Editor_Vector(m_selControl, note, creator, labeler, changed, nullptr, false, 2);
     } else {
         m_selControl = -1;
     }
