@@ -156,17 +156,19 @@ void Interpolator::DebugPrint() const {
     }
 }
 
-void Interpolator::Convert(const int idx) {
+void Interpolator::Convert() {
     m_notes.clear();
-
-    if (idx >= 0 && idx < static_cast<int>(m_cctx.chains.size())) {
-        return InterpolateChain(static_cast<size_t>(idx));
-    }
-
     for (size_t i = 0; i < m_cctx.chains.size(); ++i) {
         InterpolateChain(i);
     }
+    DebugPrint();
+}
 
+void Interpolator::Convert(const size_t idx) {
+    m_notes.clear();
+    if (idx < static_cast<int>(m_cctx.chains.size())) {
+        InterpolateChain(idx);
+    }
     DebugPrint();
 }
 

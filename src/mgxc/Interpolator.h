@@ -9,7 +9,9 @@ class Interpolator {
 public:
     explicit Interpolator(Config &cctx);
 
-    void Convert(int idx = -1);
+    void Convert();
+    void Convert(size_t idx);
+
     void CommitChart(const MargreteHandle &mg) const;
 
     std::vector<std::vector<MP_NOTEINFO>> m_notes;
