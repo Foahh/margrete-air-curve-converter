@@ -4,6 +4,8 @@
 #include "Arc.h"
 #include "Parser.h"
 
+#include <iostream>
+
 namespace aff {
     void Parser::ParseSingle(const std::string &str) {
         const size_t start = str.find('(');
@@ -145,6 +147,18 @@ namespace aff {
         }
     }
 
+    void Parser::DebugPrint() const {
+        std::cout << "Parsed " << m_cctx.chains.size() << std::endl;
+        auto i = 0;
+        for (const auto &chain: m_cctx.chains) {
+            std::cout << i++ << ":" << std::endl;
+            for (const auto &note: chain) {
+                std::cout << "  t=" << note.t << ", x=" << note.x << ", y=" << note.y
+                          << ", eX=" << static_cast<int>(note.eX) << ", eY=" << static_cast<int>(note.eY) << std::endl;
+            }
+        }
+    }
+
     void Parser::Parse(const std::string &str) {
         m_chains.clear();
         m_arcs.clear();
@@ -165,6 +179,8 @@ namespace aff {
         }
 
         FinalizeNote();
+
+        DebugPrint();
     }
 
     void Parser::ParseFile(const std::string &filePath) {

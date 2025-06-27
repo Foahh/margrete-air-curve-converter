@@ -35,6 +35,8 @@ namespace aff {
         int ParseT(const std::string &str) const;
         static int ParseX(const std::string &str);
         static int ParseY(const std::string &str);
+
+        void DebugPrint() const;
     };
 
 } // namespace aff

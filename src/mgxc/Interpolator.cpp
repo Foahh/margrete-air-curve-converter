@@ -7,6 +7,7 @@
 #include "Interpolator.h"
 
 #include <format>
+#include <iostream>
 
 #include "MargreteHandle.h"
 
@@ -143,6 +144,18 @@ void Interpolator::InterpolateChain(const size_t idx) {
 
 Interpolator::Interpolator(Config &cctx) : m_cctx(cctx) {}
 
+void Interpolator::DebugPrint() const {
+    std::cout << std::endl << "Interpolated " << m_notes.size() << std::endl;
+    int i = 0;
+    for (const auto &chain: m_notes) {
+        std::cout << i++ << ":" << std::endl;
+        for (const auto &note: chain) {
+            std::cout << "  a=" << note.longAttr << ", t=" << note.tick << ", x=" << note.x << ", h=" << note.height
+                      << std::endl;
+        }
+    }
+}
+
 void Interpolator::Convert(const int idx) {
     m_notes.clear();
 
@@ -153,6 +166,8 @@ void Interpolator::Convert(const int idx) {
     for (size_t i = 0; i < m_cctx.chains.size(); ++i) {
         InterpolateChain(i);
     }
+
+    DebugPrint();
 }
 
 void Interpolator::FinalizeSingle(std::vector<MP_NOTEINFO> &chain) const {

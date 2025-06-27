@@ -22,4 +22,6 @@ private:
     static void CommitChain(const MargreteComPtr<IMargretePluginChart> &p_chart, const std::vector<MP_NOTEINFO> &chain);
     static MargreteComPtr<IMargretePluginNote> CreateNote(const MargreteComPtr<IMargretePluginChart> &p_chart);
     void InterpolateChain(size_t idx);
+
+    void DebugPrint() const;
 };
