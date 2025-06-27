@@ -1,7 +1,6 @@
 ﻿#define CATCH_CONFIG_MAIN
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
-#include <iostream>
 
 #include "Dialog.h"
 #include "aff/Parser.h"
