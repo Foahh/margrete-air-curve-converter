@@ -39,8 +39,8 @@ TEST_CASE("Parse & Interpolate") {
 }
 
 TEST_CASE("Show Once") {
-    static auto g_dlg = std::make_unique<Dialog>(g_cctx, nullptr, std::stop_token{});
-    REQUIRE(g_dlg->ShowDialog() == S_OK);
+    auto dlg = Dialog(g_cctx, g_ctx, std::stop_token{});
+    REQUIRE(dlg.ShowDialog() == S_OK);
 }
 
 TEST_CASE("Stop Dialog") {
