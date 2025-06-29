@@ -2,6 +2,7 @@
 #include <atlbase.h>
 
 #include <algorithm>
+#include <array>
 #include <atlstr.h>
 #include <atltypes.h>
 #include <atlwin.h>
@@ -11,16 +12,15 @@
 #include <imgui_impl_dx11.h>
 #include <imgui_impl_win32.h>
 #include <shobjidl_core.h>
+#include <utility>
 #include <windows.h>
 
 #include "Dialog.h"
 
-#include <array>
-#include <utility>
-
+#include "Utils.h"
 #include "aff/Parser.h"
 #include "meta.h"
-#include "mgxc/EasingSolver.h"
+#include "mgxc/Easing.h"
 #include "mgxc/Interpolator.h"
 
 Dialog::Dialog(Config &cctx, IMargretePluginContext *p_ctx, std::stop_token st) :
@@ -179,7 +179,7 @@ HRESULT Dialog::ShowDialog() {
         return E_FAIL;
     }
 
-    RECT rect = {0, 0, 539, 491};
+    RECT rect = {0, 0, 740, 370};
     Create(hwnd, rect, W_DIALOG_TITLE, WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
     CenterWindow();
     ShowWindow(SW_SHOW);
@@ -270,21 +270,26 @@ void Dialog::UI_Error() {
 }
 
 void Dialog::UI_Main_Column_1() {
+    UI_Panel_Config_Global();
+    ImGui::Spacing();
+
     UI_Panel_Config_Import();
     ImGui::Spacing();
 
-    UI_Panel_Config_Convert();
-    ImGui::Spacing();
-
-    UI_Panel_Selector_Chains();
+    UI_Panel_Config_Commit();
     ImGui::Spacing();
 }
 
 void Dialog::UI_Main_Column_2() {
-    UI_Panel_Selector_Controls();
+    UI_Panel_Selector_Chains();
     ImGui::Spacing();
 
     UI_Panel_Editor_Chain();
+    ImGui::Spacing();
+}
+
+void Dialog::UI_Main_Column_3() {
+    UI_Panel_Selector_Controls();
     ImGui::Spacing();
 
     UI_Panel_Editor_Control();
@@ -295,9 +300,10 @@ void Dialog::UI_Main() {
     constexpr ImGuiTableFlags flags =
             ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_SizingFixedFit;
 
-    if (ImGui::BeginTable("##MainTbl", 2, flags)) {
-        ImGui::TableSetupColumn("Left", ImGuiTableColumnFlags_WidthFixed);
-        ImGui::TableSetupColumn("Right", ImGuiTableColumnFlags_WidthFixed);
+    if (ImGui::BeginTable("##MainTbl", 3, flags)) {
+        ImGui::TableSetupColumn("##MainTbl@0", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("##MainTbl@1", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("##MainTbl@2", ImGuiTableColumnFlags_WidthFixed);
 
         ImGui::TableNextRow();
 
@@ -310,8 +316,25 @@ void Dialog::UI_Main() {
         ImGui::BeginGroup();
         UI_Main_Column_2();
         ImGui::EndGroup();
+
+        ImGui::TableSetColumnIndex(2);
+        ImGui::BeginGroup();
+        UI_Main_Column_3();
+        ImGui::EndGroup();
+
         ImGui::EndTable();
     }
+}
+
+void Dialog::UI_Panel_Config_Global() {
+    ImGui::TextUnformatted("Global Config");
+    ImGui::BeginChild("##Global", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
+
+    ImGui::PushItemWidth(100.0f);
+    UI_Component_Combo_Division();
+    ImGui::PopItemWidth();
+
+    ImGui::EndChild();
 }
 
 void Dialog::UI_Panel_Config_Import() {
@@ -330,7 +353,14 @@ void Dialog::UI_Panel_Config_Import() {
 
     ImGui::PopItemWidth();
 
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.80f, 0.35f, 0.00f, 1.00f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.93f, 0.46f, 0.00f, 1.00f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.65f, 0.28f, 0.00f, 1.00f));
+
     UI_Component_Button_File();
+
+    ImGui::PopStyleColor(3);
+
     ImGui::SameLine();
     ImGui::Checkbox("Append", &m_cctx.append);
 
@@ -343,10 +373,22 @@ void Dialog::UI_Panel_Editor_Chain() const {
     ImGui::BeginChild("##NoteBeginEdit", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
     ImGui::PushItemWidth(100.0f);
 
-    if (m_selChain >= 0 && m_selChain < static_cast<int>(m_cctx.chains.size())) {
-        auto &note = m_cctx.chains[m_selChain];
-        if (!note.empty()) {
-            UI_Component_Editor_Chain(note);
+    if (SelChain_InRange()) {
+        auto &chain = m_cctx.chains[m_selChain];
+        if (!chain.empty()) {
+            UI_Component_Combo_Note(chain);
+            ImGui::Separator();
+
+            UI_Component_Combo_EasingKind(chain);
+            ImGui::Separator();
+
+            if (ImGui::InputInt("Width [1,16]", &chain.width)) {
+                chain.width = std::clamp(chain.width, 1, 16);
+            }
+
+            if (ImGui::InputInt("TIL [0,15]", &chain.til)) {
+                chain.til = std::clamp(chain.til, 0, 15);
+            }
         }
     }
 
@@ -359,15 +401,15 @@ void Dialog::UI_Panel_Editor_Control() {
     ImGui::BeginChild("##NoteControlEdit", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
     ImGui::PushItemWidth(100.0f);
 
-    if (m_selControl >= 0 && m_selControl < static_cast<int>(m_cctx.chains[m_selChain].size())) {
+    if (SelControl_InRange()) {
         auto &chain = m_cctx.chains[m_selChain];
         auto &note = chain[m_selControl];
 
-        const int prevT = note.t;
+        const auto pT = note.t;
         if (ImGui::InputInt("t", &note.t)) {
             note.t = std::max(note.t, 0);
-            if (note.t != prevT) {
-                SortChain(chain);
+            if (note.t != pT) {
+                SelChain_Sort();
             }
         }
 
@@ -391,39 +433,27 @@ void Dialog::UI_Panel_Editor_Control() {
     ImGui::EndChild();
 }
 
-void Dialog::SortChain(std::vector<mgxc::Note> &chain) {
-    const int selId = chain[m_selControl].GetID();
-    std::ranges::stable_sort(chain, [](const mgxc::Note &a, const mgxc::Note &b) { return a.t < b.t; });
-    for (std::size_t i = 0; i < chain.size(); ++i) {
-        if (chain[i].GetID() == selId) {
-            m_selControl = static_cast<int>(i);
-            break;
-        }
-    }
-}
 
-template<class Container, class Creator, class Labeler, class Changed, class Extra>
+template<std::size_t Min, bool ShowClear, class Container, class Creator, class Labeler, class Changed, class Extra>
 void Dialog::UI_Component_Editor_Vector(int &selIndex, Container &vec, Creator creator, Labeler labeler,
-                                        Changed changed, Extra extra, const bool showClear, const int minItems) {
+                                        Changed changed, Extra extra) {
     if (ImGui::SmallButton("+")) {
-        vec.emplace_back(std::move(creator()));
+        vec.push_back(std::move(creator()));
         selIndex = static_cast<int>(vec.size()) - 1;
-
         if constexpr (!std::is_same_v<Changed, std::nullptr_t>) {
             changed();
         }
     }
+
+    const bool canRemove = utils::in_bounds(vec, selIndex) && vec.size() > Min;
     ImGui::SameLine();
-
-    const bool canRemove =
-            selIndex >= 0 && selIndex < static_cast<int>(vec.size()) && vec.size() > static_cast<std::size_t>(minItems);
-
     ImGui::BeginDisabled(!canRemove);
     if (ImGui::SmallButton("-") && canRemove) {
         vec.erase(vec.begin() + selIndex);
+
         if (vec.empty()) {
             selIndex = -1;
-        } else if (selIndex >= static_cast<int>(vec.size())) {
+        } else if (selIndex >= vec.size()) {
             selIndex = static_cast<int>(vec.size()) - 1;
         }
 
@@ -433,8 +463,8 @@ void Dialog::UI_Component_Editor_Vector(int &selIndex, Container &vec, Creator c
     }
     ImGui::EndDisabled();
 
-    if (showClear) {
-        const bool canClear = vec.size() > static_cast<std::size_t>(minItems);
+    if (ShowClear) {
+        const bool canClear = vec.size() > Min;
 
         ImGui::SameLine();
         ImGui::BeginDisabled(!canClear);
@@ -451,13 +481,15 @@ void Dialog::UI_Component_Editor_Vector(int &selIndex, Container &vec, Creator c
 
     ImGui::Separator();
 
-    for (int i = 0; i < static_cast<int>(vec.size()); ++i) {
+    ImGui::BeginChild("##SelectorContent");
+    for (int i = 0; i < vec.size(); ++i) {
         ImGui::PushID(i);
         std::string lbl = labeler(vec[i], i);
         if (ImGui::Selectable(lbl.c_str(), i == selIndex))
             selIndex = i;
         ImGui::PopID();
     }
+    ImGui::EndChild();
 }
 
 constexpr std::string_view GetNoteTypeString(const MpInteger type) {
@@ -476,17 +508,20 @@ constexpr std::string_view GetNoteTypeString(const MpInteger type) {
 void Dialog::UI_Panel_Selector_Chains() {
     const auto creator = [] {
         using enum EasingMode;
-        return std::vector{mgxc::Note{MP_NOTETYPE_AIRSLIDE, 0, 0, In, 80, In, 4, 0},
-                           mgxc::Note{MP_NOTETYPE_AIRSLIDE, 960, 12, In, 80, In, 4, 0}};
+        return mgxc::Chain{MP_NOTETYPE_AIRSLIDE,
+                           4,
+                           0,
+                           {Easing::Sine},
+                           {mgxc::Joint{0, 0, 80, In, In}, mgxc::Joint{960, 12, 80, In, In}}};
     };
 
-    const auto labeler = [](std::vector<mgxc::Note> const &c, const int idx) {
+    const auto labeler = [](mgxc::Chain const &c, const int idx) {
         if (c.empty()) {
             return std::format("![{}] Empty", idx);
         }
-        const auto type = GetNoteTypeString(c.front().type);
+        const auto type = GetNoteTypeString(c.type);
         const auto prefix = c.size() <= 1 ? "!" : "";
-        return std::format("{}[{}] {}:{} @ {}", prefix, idx, type, c.size(), c.front().t);
+        return std::format("{}[{}] {}:{} {} @ {}", prefix, idx, type, c.size(), GetKindStr(c.es.m_kind), c.front().t);
     };
 
     const auto extra = [this] {
@@ -495,20 +530,50 @@ void Dialog::UI_Panel_Selector_Chains() {
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.0f, 0.0f, 1.0f));
 
         ImGui::SameLine();
-        ImGui::BeginDisabled(m_selChain < 0 || m_selChain >= static_cast<int>(m_cctx.chains.size()));
+        ImGui::BeginDisabled(!SelChain_InRange());
         if (ImGui::SmallButton("Commit")) {
-            Convert(m_selChain);
+            Commit(m_selChain);
         }
         ImGui::EndDisabled();
 
         ImGui::SameLine();
         ImGui::BeginDisabled(m_cctx.chains.empty());
         if (ImGui::SmallButton("Commit All") && !m_cctx.chains.empty()) {
-            Convert();
+            Commit();
         }
         ImGui::EndDisabled();
 
         ImGui::PopStyleColor(3);
+        ImGui::BeginDisabled(m_cctx.chains.empty());
+        if (ImGui::SmallButton("Copy All")) {
+            const auto text = mgxc::data::Serialize(m_cctx.chains);
+            ImGui::SetClipboardText(text.c_str());
+        }
+        ImGui::EndDisabled();
+
+        ImGui::SameLine();
+        ImGui::BeginDisabled(!SelChain_InRange());
+        if (ImGui::SmallButton("Copy")) {
+            const auto text = mgxc::data::Serialize(m_cctx.chains[m_selChain]);
+            ImGui::SetClipboardText(text.c_str());
+        }
+        ImGui::EndDisabled();
+
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Paste")) {
+            const auto text = ImGui::GetClipboardText();
+            if (text && *text) {
+                try {
+                    const auto chains = mgxc::data::Parse(text);
+                    if (!chains.empty()) {
+                        m_cctx.chains.insert(m_cctx.chains.end(), chains.begin(), chains.end());
+                    }
+                } catch (const std::exception &e) {
+                    m_errorText = e.what();
+                    m_showErrorPopup = true;
+                }
+            }
+        }
     };
 
     ImGui::TextUnformatted("Select Notes");
@@ -517,58 +582,68 @@ void Dialog::UI_Panel_Selector_Chains() {
     ImGui::EndChild();
 }
 
-constexpr std::string_view GetModeString(const EasingMode mode) {
-    switch (mode) {
-        using enum EasingMode;
-        case Linear:
-            return "s ";
-        case In:
-            return "si";
-        case Out:
-            return "so";
-        default:
-            return "??";
-    }
-}
-
 void Dialog::UI_Panel_Selector_Controls() {
     const auto creator = [this] {
-        mgxc::Note control{};
-        if (m_selChain >= 0 && m_selChain < static_cast<int>(m_cctx.chains.size())) {
-            const auto &note = m_cctx.chains[m_selChain];
-            if (m_selControl >= 0 && m_selControl < static_cast<int>(note.size())) {
-                control.t = note[m_selControl].t + m_cctx.snap;
-                control.x = note[m_selControl].x;
-                control.y = note[m_selControl].y;
-                control.eX = note[m_selControl].eX;
-                control.eY = note[m_selControl].eY;
-                control.type = note[m_selControl].type;
-                control.width = note[m_selControl].width;
-                control.til = note[m_selControl].til;
-            }
+        if (!SelChain_InRange()) {
+            throw std::runtime_error("No chain selected");
         }
-        return control;
+        auto &chain = m_cctx.chains[m_selChain];
+
+        const int idx = SelControl_InRange() ? m_selControl : static_cast<int>(chain.size()) - 1;
+        mgxc::Joint joint{};
+        if (utils::in_bounds(chain, idx)) {
+            joint.t = chain[idx].t + m_cctx.snap;
+            joint.x = chain[idx].x;
+            joint.y = chain[idx].y;
+            joint.eX = chain[idx].eX;
+            joint.eY = chain[idx].eY;
+        }
+
+        while (std::ranges::any_of(chain, [&joint](const mgxc::Joint &n) { return n.t == joint.t; })) {
+            joint.t += m_cctx.snap;
+        }
+
+        return joint;
     };
 
-    const auto changed = [this] {
-        if (m_selChain >= 0 && m_selChain < static_cast<int>(m_cctx.chains.size()) && m_selControl >= 0 &&
-            m_selControl < static_cast<int>(m_cctx.chains[m_selChain].size())) {
-            SortChain(m_cctx.chains[m_selChain]);
+    const auto changed = [this] { SelChain_Sort(); };
+
+    const auto extra = [this] {
+        ImGui::SameLine();
+        ImGui::BeginDisabled(!SelChain_InRange());
+        if (ImGui::SmallButton("Paste")) {
+            auto &selChain = m_cctx.chains[m_selChain];
+            const auto text = ImGui::GetClipboardText();
+            if (text && *text) {
+                try {
+                    for (auto const &chain: mgxc::data::Parse(text)) {
+                        for (auto const &note: chain) {
+                            if (std::ranges::find(selChain, note) == selChain.end()) {
+                                selChain.push_back(note);
+                            }
+                        }
+                    }
+                    SelChain_Sort();
+                } catch (const std::exception &e) {
+                    m_errorText = e.what();
+                    m_showErrorPopup = true;
+                }
+            }
         }
+        ImGui::EndDisabled();
     };
 
     ImGui::Text("Select Controls @ Note [%d]", m_selChain);
     ImGui::BeginChild("##ControlSelector", {m_childWidth, m_childHeight}, ImGuiChildFlags_Border);
 
-    if (m_selChain >= 0 && m_selChain < static_cast<int>(m_cctx.chains.size()) &&
-        m_selControl < static_cast<int>(m_cctx.chains[m_selChain].size())) {
-        auto &note = m_cctx.chains[m_selChain];
-        const auto labeler = [note](mgxc::Note const &n, int idx) {
-            std::string eX = idx == note.size() - 1 ? "--" : GetModeString(n.eX).data();
-            std::string eY = idx == note.size() - 1 ? "--" : GetModeString(n.eY).data();
+    if (SelChain_InRange()) {
+        auto &chain = m_cctx.chains[m_selChain];
+        const auto labeler = [chain](mgxc::Joint const &n, int idx) {
+            char eX = idx == chain.size() - 1 ? '-' : GetModeChar(n.eX);
+            char eY = idx == chain.size() - 1 ? '-' : GetModeChar(n.eY);
             return std::format("[{}] {}{} ({},{}) @ {}", idx, eX, eY, n.x, n.y, n.t);
         };
-        UI_Component_Editor_Vector(m_selControl, note, creator, labeler, changed, nullptr, false, 2);
+        UI_Component_Editor_Vector<2, false>(m_selControl, chain.joints, creator, labeler, changed, extra);
     } else {
         m_selControl = -1;
     }
@@ -580,6 +655,7 @@ void Dialog::UI_Component_Button_File() {
     if (!ImGui::Button("Import *.aff")) {
         return;
     }
+
 
     OPENFILENAMEW ofn = {};
     WCHAR szFile[MAX_PATH] = {};
@@ -604,44 +680,26 @@ void Dialog::UI_Component_Button_File() {
     });
 }
 
-void Dialog::UI_Component_Editor_Chain(std::vector<mgxc::Note> &chain) {
-    auto width = chain.front().width;
-    if (ImGui::InputInt("Width [1,16]", &width)) {
-        for (auto &c: chain) {
-            c.width = std::clamp(width, 1, 16);
-        }
-    }
-
-    auto til = chain.front().til;
-    if (ImGui::InputInt("TIL [0,15]", &til)) {
-        for (auto &c: chain) {
-            c.til = std::clamp(til, 0, 15);
-        }
-    }
-
+void Dialog::UI_Component_Combo_Note(mgxc::Chain &chain) {
     constexpr std::array kItems{
             std::pair{MP_NOTETYPE_SLIDE, GetNoteTypeString(MP_NOTETYPE_SLIDE)},
             std::pair{MP_NOTETYPE_AIRSLIDE, GetNoteTypeString(MP_NOTETYPE_AIRSLIDE)},
             std::pair{MP_NOTETYPE_AIRCRUSH, GetNoteTypeString(MP_NOTETYPE_AIRCRUSH)},
     };
 
-    const auto it = std::ranges::find_if(kItems, [&chain](const auto &p) { return p.first == chain.front().type; });
-    auto current = static_cast<int>(std::distance(kItems.begin(), it));
-    if (current >= static_cast<int>(kItems.size())) {
-        current = 0;
-        for (auto &c: chain) {
-            c.type = kItems[current].first;
-        }
+    const auto it = std::ranges::find_if(kItems, [&chain](const auto &p) { return p.first == chain.type; });
+    auto curr = std::distance(kItems.begin(), it);
+    if (curr >= kItems.size()) {
+        curr = 0;
+        chain.type = kItems[curr].first;
     }
 
-    if (ImGui::BeginCombo("Note Type", kItems[current].second.data())) {
+    if (ImGui::BeginCombo("Note Type", kItems[curr].second.data())) {
         for (std::size_t i = 0; i < kItems.size(); ++i) {
-            const bool selected = i == static_cast<std::size_t>(current);
+            const bool selected = i == curr;
             if (ImGui::Selectable(kItems[i].second.data(), selected)) {
-                current = static_cast<int>(i);
-                for (auto &c: chain) {
-                    c.type = kItems[current].first;
-                }
+                curr = static_cast<int>(i);
+                chain.type = kItems[curr].first;
             }
             if (selected) {
                 ImGui::SetItemDefaultFocus();
@@ -651,12 +709,14 @@ void Dialog::UI_Component_Editor_Chain(std::vector<mgxc::Note> &chain) {
     }
 }
 
+void Dialog::UI_Component_Combo_EasingMode(const std::string_view &label, EasingMode &mode) {
+    using enum EasingMode;
+    static constexpr std::array enumMap{Linear, In, Out};
+    static const char *labels[] = {"Linear", "In", "Out"};
 
-void Dialog::UI_Component_Combo_EasingMode(const std::string_view &label, EasingMode &esMode) {
-    static const char *esModeNames[] = {"Linear", "In", "Out"};
-    auto esModeInt = static_cast<int>(esMode);
-    if (ImGui::Combo(label.data(), &esModeInt, esModeNames, IM_ARRAYSIZE(esModeNames))) {
-        esMode = static_cast<EasingMode>(esModeInt);
+    int curr = utils::enum_to_idx(mode, enumMap);
+    if (ImGui::Combo(label.data(), &curr, labels, IM_ARRAYSIZE(labels))) {
+        mode = utils::idx_to_enum(curr, enumMap);
     }
 }
 
@@ -676,9 +736,7 @@ void Dialog::UI_Component_Combo_Division() const {
         previewStr = std::to_string(snapDivisors[selectedDivisorIndex]);
     }
 
-    ImGui::PushItemWidth(55.0f);
-
-    if (ImGui::BeginCombo("=", previewStr.c_str())) {
+    if (ImGui::BeginCombo("Division", previewStr.c_str())) {
         for (int i = 0; i < snapDivisors.size(); i++) {
             const bool isSelected = selectedDivisorIndex == i;
             if (ImGui::Selectable(std::to_string(snapDivisors[i]).c_str(), isSelected)) {
@@ -692,55 +750,63 @@ void Dialog::UI_Component_Combo_Division() const {
         ImGui::EndCombo();
     }
 
-    ImGui::PopItemWidth();
-    ImGui::PushItemWidth(85.0f);
-    ImGui::SameLine();
-
     int snapInput = m_cctx.snap;
-    if (ImGui::InputInt("Division", &snapInput)) {
+    if (ImGui::InputInt("Snap Tick", &snapInput)) {
         snapInput = std::clamp(snapInput, 1, mgxc::BAR_TICKS);
         m_cctx.snap = snapInput;
     }
-
-    ImGui::PopItemWidth();
 }
 
-void Dialog::UI_Component_Combo_Easing() const {
-    auto &[m_kind, m_exponent, m_epsilon] = m_cctx.solver;
-    static const char *esTypeNames[] = {"Sine", "Power", "Circular"};
-    auto esTypeInt = static_cast<int>(m_kind);
+void Dialog::UI_Component_Combo_EasingKind(mgxc::Chain &chain) {
+    using enum EasingKind;
+    static constexpr std::array enumMap{Sine, Power, Circular};
+    static const char *label[] = {"Sine", "Power", "Circular"};
 
-    if (ImGui::Combo("Easing", &esTypeInt, esTypeNames, IM_ARRAYSIZE(esTypeNames))) {
-        m_kind = static_cast<EasingKind>(esTypeInt);
+    auto &[m_kind, m_params] = chain.es;
+    auto idx = utils::enum_to_idx(m_kind, enumMap);
+
+    if (ImGui::Combo("Easing", &idx, label, IM_ARRAYSIZE(label))) {
+        m_kind = utils::idx_to_enum(idx, enumMap);
+        switch (m_kind) {
+            case Sine:
+                m_params = 0.0;
+                break;
+            case Power:
+                m_params = 2.0;
+                break;
+            case Circular:
+                m_params = 0.2;
+                break;
+        }
     }
 
-    if (m_kind == EasingKind::Power) {
-        const int prev = m_exponent;
-        ImGui::InputInt("Exponent [!=0]", &m_exponent);
-        if (m_exponent == 0) {
-            if (prev > m_exponent) {
-                m_exponent = -1;
+    if (m_kind == Power) {
+        auto curr = static_cast<int>(m_params);
+        const int prev = curr;
+
+        if (ImGui::InputInt("Exponent [!=0]", &curr)) {
+            if (curr == 0) {
+                if (prev > curr) {
+                    m_params = -1;
+                } else {
+                    m_params = 1;
+                }
             } else {
-                m_exponent = 1;
+                m_params = curr;
             }
         }
-    } else if (m_kind == EasingKind::Circular) {
-        ImGui::InputDouble("Linearity [0,1]", &m_epsilon, 0.01, 0.1, "%.3f");
-        m_epsilon = std::clamp(m_epsilon, 0.0, 1.0);
+    } else if (m_kind == Circular) {
+        if (ImGui::InputDouble("Linearity [0,1]", &m_params, 0.01, 0.1, "%.3f")) {
+            m_params = std::clamp(m_params, 0.0, 1.0);
+        }
     }
 }
 
-void Dialog::UI_Panel_Config_Convert() const {
-    ImGui::TextUnformatted("Convert Config");
+void Dialog::UI_Panel_Config_Commit() {
+    ImGui::TextUnformatted("Commit Config");
     ImGui::BeginChild("##Config", {m_childWidth, 0}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY);
 
-    UI_Component_Combo_Division();
-    ImGui::Separator();
-
     ImGui::PushItemWidth(100.0f);
-
-    UI_Component_Combo_Easing();
-    ImGui::Separator();
 
     if (ImGui::InputInt("x Offset [±15]", &m_cctx.xOffset)) {
         m_cctx.xOffset = std::clamp(m_cctx.xOffset, -15, 15);
@@ -772,18 +838,40 @@ bool Dialog::Catch(F &&f, Args &&...args) {
     }
 }
 
-void Dialog::Convert(const int idx) {
+void Dialog::Commit(const int idx) {
     Catch([this, idx] {
         m_cctx.tOffset = m_mg.GetTickOffset();
         auto intp = Interpolator(m_cctx);
         intp.Convert(idx);
 
         if (m_mg.CanCommit()) {
-            intp.CommitChart(m_mg);
+            intp.Commit(m_mg);
         }
     });
 }
 
 bool Dialog::IsRunning() const noexcept { return m_running; }
+
+void Dialog::SelChain_Sort() {
+    if (!SelControl_InRange()) {
+        return;
+    }
+    auto &chain = m_cctx.chains[m_selChain];
+    const auto selId = chain[m_selControl].GetID();
+    std::ranges::stable_sort(chain, [](const mgxc::Joint &a, const mgxc::Joint &b) { return a.t < b.t; });
+    for (std::size_t i = 0; i < chain.size(); ++i) {
+        if (chain[i].GetID() == selId) {
+            m_selControl = static_cast<int>(i);
+            break;
+        }
+    }
+}
+
+constexpr bool Dialog::SelChain_InRange() const noexcept { return utils::in_bounds(m_cctx.chains, m_selChain); }
+
+constexpr bool Dialog::SelControl_InRange() const noexcept {
+    return SelChain_InRange() && utils::in_bounds(m_cctx.chains[m_selChain], m_selControl);
+}
+
 
 #pragma endregion Helper

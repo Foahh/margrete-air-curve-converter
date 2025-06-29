@@ -19,24 +19,19 @@ namespace aff {
         Config &m_cctx;
 
         std::vector<Arc> m_arcs;
+        std::vector<std::vector<Arc>> m_archains;
         std::vector<bool> m_handled;
-        std::vector<std::vector<Arc>> m_chains;
 
         void ParseSingle(const std::string &str);
 
-        bool PushLink(std::vector<Arc> &chain);
-        bool HasPreceding(const Arc &arc);
-        std::vector<Arc> BuildChain(size_t startIndex);
+        bool LinkArc(std::vector<Arc> &chain);
+        bool HasPrecedingArc(const Arc &arc);
+
         void ParseBpm(const std::string &token);
         void ParseString(const std::string &str);
-        void FinalizeArc(const std::string_view &str, Arc &arc);
-        void FinalizeNote() const;
-
         int ParseT(const std::string &str) const;
         static int ParseX(const std::string &str);
         static int ParseY(const std::string &str);
-
-        void DebugPrint() const;
     };
 
 } // namespace aff

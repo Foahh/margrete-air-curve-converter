@@ -2,23 +2,22 @@
 
 #include <vector>
 
-#include "EasingSolver.h"
-#include "Note.h"
+#include "Primitive.h"
 
 class Config {
 public:
-    EasingSolver solver;
-    std::vector<std::vector<mgxc::Note>> chains;
+    // global context
+    std::vector<mgxc::Chain> chains;
 
-    // all options
+    // common options
     MpInteger snap = 5;
 
-    // parse options
+    // arc parse options
     bool append{false};
     MpInteger width = 4;
     MpInteger til = 0;
 
-    // convert options
+    // commit options
     MpInteger tOffset = 0;
     MpInteger xOffset = 0;
     MpInteger yOffset = 0;

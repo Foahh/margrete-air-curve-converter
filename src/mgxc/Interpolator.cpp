@@ -1,39 +1,41 @@
 #define NOMINMAX
 
 #include <algorithm>
+#include <format>
+#include <iostream>
 #include <utility>
 #include <vector>
 
 #include "Interpolator.h"
-
-#include <format>
-#include <iostream>
-
 #include "MargreteHandle.h"
+#include "Primitive.h"
+#include "Utils.h"
 
 Interpolator::Interpolator(Config &cctx) : m_cctx(cctx) {}
 
-static int step(const int v) { return (v > 0) - (v < 0); }
-static int iround(const double v) { return static_cast<int>(std::round(v)); }
+void Interpolator::PushSegment(const mgxc::Chain &chain, const mgxc::Joint &curr, const mgxc::Joint &next,
+                               const mgxc::Joint &base) {
 
-Joint Interpolator::Snap(const mgxc::Note &src) const {
-    Joint k;
-    k.x = src.x;
-    k.y = src.y;
-    k.t = iround(src.t / m_cctx.snap);
-    k.eX = src.eX;
-    k.eY = src.eY;
-    return k;
-}
+    MP_NOTEINFO note{};
+    note.type = chain.type;
+    note.longAttr = MP_NOTELONGATTR_CONTROL;
+    note.direction = MP_NOTEDIR_UP;
+    note.exAttr = MP_NOTEEXATTR_NONE;
+    note.variationId = 0;
+    note.x = base.x;
+    note.width = chain.width;
+    note.height = base.y;
+    note.tick = base.t;
+    note.timelineId = chain.til;
+    note.optionValue = MP_OPTIONVALUE_AIRCRUSH_TRACELIKE;
 
-void Interpolator::Push(const MP_NOTEINFO &base, const Joint &curr, const Joint &next) {
-    if (m_chain.empty() || m_chain.back().tick != base.tick) {
-        m_chain.push_back(base);
+    if (m_noteChain.empty() || m_noteChain.back().tick != base.t) {
+        m_noteChain.push_back(note);
         return;
     }
 
-    auto &last = m_chain.back();
-    if (last.x == base.x && last.height == base.height && last.tick == base.tick) {
+    auto &last = m_noteChain.back();
+    if (last.x == base.x && last.height == base.y && last.tick == base.t) {
         return;
     }
 
@@ -41,67 +43,68 @@ void Interpolator::Push(const MP_NOTEINFO &base, const Joint &curr, const Joint 
     const double dX = next.x - curr.x;
     const double dY = next.y - curr.y;
 
-    const double pT = static_cast<double>(base.tick - curr.t) / dT;
-    const double fPTx = m_cctx.solver.Solve(pT, curr.eX);
+    const double pT = (base.t - curr.t) / dT;
+    const double fPTx = chain.es.Solve(pT, curr.eX);
     const double idealX = curr.x + fPTx * dX;
     double errLast = std::abs(idealX - last.x);
     double errNew = std::abs(idealX - base.x);
 
     if (dY != 0) {
-        const double fPTy = m_cctx.solver.Solve(pT, curr.eY);
+        const double fPTy = chain.es.Solve(pT, curr.eY);
         const double idealY = curr.y + fPTy * dY;
         errLast = std::hypot(errLast, std::abs(idealY - last.height));
-        errNew = std::hypot(errNew, std::abs(idealY - base.height));
+        errNew = std::hypot(errNew, std::abs(idealY - base.y));
     }
 
     if (errNew < errLast) {
-        last = base;
+        last = note;
     }
 }
 
-void Interpolator::VerticalSegment(MP_NOTEINFO base, const Joint &curr, const Joint &next) {
+void Interpolator::VerticalSegment(const mgxc::Chain &chain, const mgxc::Joint &curr, const mgxc::Joint &next) {
     const double dT = next.t - curr.t;
     const double dY = next.y - curr.y;
-    const int sY = step(dY);
+    const int sY = utils::step(dY);
 
+    auto base = curr;
     for (int y = curr.y; sY > 0 ? y <= next.y : y >= next.y; y += sY) {
         const double pY = (y - curr.y) / dY;
-        const double fPY = m_cctx.solver.InverseSolve(pY, curr.eY);
+        const double fPY = chain.es.InverseSolve(pY, curr.eY);
 
-        base.tick = iround(curr.t + fPY * dT);
+        base.t = utils::iround(curr.t + fPY * dT);
         base.x = curr.x;
-        base.height = y;
+        base.y = y;
 
-        Push(base, curr, next);
+        PushSegment(chain, curr, next, base);
     }
 }
 
-void Interpolator::HorizontalSegment(MP_NOTEINFO base, const Joint &curr, const Joint &next) {
+void Interpolator::HorizontalSegment(const mgxc::Chain &chain, const mgxc::Joint &curr, const mgxc::Joint &next) {
     const double dT = next.t - curr.t;
     const double dX = next.x - curr.x;
     const double dY = next.y - curr.y;
-    const int sX = step(dX);
+    const int sX = utils::step(dX);
 
+    auto base = curr;
     for (int x = curr.x; sX > 0 ? x <= next.x : x >= next.x; x += sX) {
         const double pX = (x - curr.x) / dX;
-        const double fPX = m_cctx.solver.InverseSolve(pX, curr.eX);
+        const double fPX = chain.es.InverseSolve(pX, curr.eX);
 
-        base.tick = iround(curr.t + fPX * dT);
+        base.t = utils::iround(curr.t + fPX * dT);
         base.x = x;
 
         if (dY != 0) {
-            const double pT = (base.tick - curr.t) / dT;
-            const double fPT = m_cctx.solver.Solve(pT, curr.eY);
-            base.height = iround(curr.y + fPT * dY);
+            const double pT = (base.t - curr.t) / dT;
+            const double fPT = chain.es.Solve(pT, curr.eY);
+            base.y = utils::iround(curr.y + fPT * dY);
         }
 
-        Push(base, curr, next);
+        PushSegment(chain, curr, next, base);
     }
 }
 
-
 void Interpolator::InterpolateChain(std::size_t idx) {
-    m_chain = {};
+    m_noteChain = {};
 
     if (idx >= m_cctx.chains.size()) {
         throw std::out_of_range(std::format("Invalid chain index: {}", idx));
@@ -112,25 +115,15 @@ void Interpolator::InterpolateChain(std::size_t idx) {
         throw std::invalid_argument(std::format("Chain [{}] must have at least 2 notes", idx));
     }
 
-    MP_NOTEINFO n{};
-    n.type = chain.front().type;
-    n.longAttr = MP_NOTELONGATTR_CONTROL;
-    n.width = chain.front().width;
-    n.timelineId = chain.front().til;
-
     for (std::size_t i = 0; i < chain.size() - 1; ++i) {
-        Joint curr = Snap(chain[i]);
-        Joint next = Snap(chain[i + 1]);
+        mgxc::Joint curr = chain[i].Snap(m_cctx.snap);
+        mgxc::Joint next = chain[i + 1].Snap(m_cctx.snap);
 
-        if (curr.t > next.t) {
+        if (curr.t >= next.t) {
             throw std::invalid_argument(
                     std::format("Invalid Chain [{}]: note [{}] (t={}) must be before note [{}] (t={})", idx, i, curr.t,
                                 i + 1, next.t));
         }
-
-        n.x = curr.x;
-        n.tick = curr.t;
-        n.height = curr.y;
 
         const bool trivX = curr.eX == EasingMode::Linear;
         const bool trivY = curr.eY == EasingMode::Linear;
@@ -138,20 +131,17 @@ void Interpolator::InterpolateChain(std::size_t idx) {
         const bool sameY = curr.y == next.y;
 
         if ((sameX || trivX) && (sameY || trivY)) {
-            Push(n, curr, next);
+            PushSegment(chain, curr, next, curr);
         } else if (sameX) {
-            VerticalSegment(n, curr, next);
+            VerticalSegment(chain, curr, next);
         } else {
-            HorizontalSegment(n, curr, next);
+            HorizontalSegment(chain, curr, next);
         }
 
-        n.x = next.x;
-        n.tick = next.t;
-        n.height = next.y;
-        Push(n, curr, next);
+        PushSegment(chain, curr, next, next);
     }
 
-    for (auto &note: m_chain) {
+    for (auto &note: m_noteChain) {
         note.tick *= m_cctx.snap;
         note.tick += m_cctx.tOffset;
         note.x += m_cctx.xOffset;
@@ -161,16 +151,16 @@ void Interpolator::InterpolateChain(std::size_t idx) {
         }
     }
 
-    m_chain.front().longAttr = MP_NOTELONGATTR_BEGIN;
-    m_chain.back().longAttr = MP_NOTELONGATTR_END;
+    m_noteChain.front().longAttr = MP_NOTELONGATTR_BEGIN;
+    m_noteChain.back().longAttr = MP_NOTELONGATTR_END;
 
-    m_chains.push_back(m_chain);
+    m_noteChains.push_back(std::move(m_noteChain));
 }
 
-void Interpolator::DebugPrint() const {
-    std::cout << std::endl << "Interpolated " << m_chains.size() << std::endl;
+void Print(const std::vector<std::vector<MP_NOTEINFO>> &chains) {
+    std::cout << std::endl << "Interpolated " << chains.size() << std::endl;
     int i = 0;
-    for (const auto &chain: m_chains) {
+    for (const auto &chain: chains) {
         std::cout << i++ << ":" << std::endl;
         for (const auto &note: chain) {
             std::cout << "  a=" << note.longAttr << ", t=" << note.tick << ", x=" << note.x << ", h=" << note.height
@@ -179,20 +169,19 @@ void Interpolator::DebugPrint() const {
     }
 }
 
-void Interpolator::Convert() {
-    m_chains.clear();
-    for (size_t i = 0; i < m_cctx.chains.size(); ++i) {
-        InterpolateChain(i);
-    }
-    DebugPrint();
-}
 
-void Interpolator::Convert(const size_t idx) {
-    m_chains.clear();
-    if (idx < static_cast<int>(m_cctx.chains.size())) {
+void Interpolator::Convert(const int idx) {
+    m_noteChains.clear();
+
+    if (idx < 0) {
+        for (size_t i = 0; i < m_cctx.chains.size(); ++i) {
+            InterpolateChain(i);
+        }
+    } else if (idx < m_cctx.chains.size()) {
         InterpolateChain(idx);
     }
-    DebugPrint();
+
+    Print(m_noteChains);
 }
 
 void Interpolator::Clamp(MP_NOTEINFO &note) {
@@ -201,15 +190,15 @@ void Interpolator::Clamp(MP_NOTEINFO &note) {
     note.width = std::max(1, std::min(note.width, 16 - note.x));
 }
 
-void Interpolator::CommitChart(const MargreteHandle &mg) const {
-    if (m_chains.empty()) {
+void Interpolator::Commit(const MargreteHandle &mg) const {
+    if (m_noteChains.empty()) {
         return;
     }
 
     try {
         mg.BeginRecording();
         const auto chart = mg.GetChart();
-        for (const auto &chain: m_chains) {
+        for (const auto &chain: m_noteChains) {
             CommitChain(chart, chain);
         }
         mg.CommitRecording();

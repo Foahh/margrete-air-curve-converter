@@ -73,7 +73,7 @@ function(build_main_library)
             src/aff/Parser.cpp
             src/Dialog.cpp
             src/mgxc/Interpolator.cpp
-            src/mgxc/EasingSolver.cpp
+            src/mgxc/Easing.cpp
             src/mgxc/MargreteHandle.cpp
             src/Plugin.cpp
             ${CMAKE_CURRENT_BINARY_DIR}/include/version.rc
@@ -88,7 +88,7 @@ function(build_tests)
             src/aff/Parser.cpp
             src/Dialog.cpp
             src/mgxc/Interpolator.cpp
-            src/mgxc/EasingSolver.cpp
+            src/mgxc/Easing.cpp
             src/mgxc/MargreteHandle.cpp
             src/Plugin.cpp
     )

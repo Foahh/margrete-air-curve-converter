@@ -40,8 +40,8 @@ private:
     bool m_running{false};
     std::stop_token m_st;
 
-    float m_childWidth{250.0f};
-    float m_childHeight{165.0f};
+    float m_childWidth{235.0f};
+    float m_childHeight{150.0f};
 
     int m_selChain{-1};
     int m_selControl{-1};
@@ -69,32 +69,36 @@ private:
     // Helper
     template<class F, class... Args>
     bool Catch(F &&f, Args &&...args);
-    void Convert(int idx = -1);
-    void SortChain(std::vector<mgxc::Note> &chain);
+    void Commit(int idx = -1);
+    void SelChain_Sort();
+    constexpr bool SelChain_InRange() const noexcept;
+    constexpr bool SelControl_InRange() const noexcept;
 
     // UI
     void UI_Main();
     void UI_Main_Column_1();
     void UI_Main_Column_2();
+    void UI_Main_Column_3();
 
+    void UI_Panel_Config_Global();
     void UI_Panel_Config_Import();
-    void UI_Panel_Config_Convert() const;
+    void UI_Panel_Config_Commit();
 
     void UI_Panel_Selector_Chains();
-    void UI_Panel_Selector_Controls();
-
     void UI_Panel_Editor_Chain() const;
+
+    void UI_Panel_Selector_Controls();
     void UI_Panel_Editor_Control();
 
-    static void UI_Component_Editor_Chain(std::vector<mgxc::Note> &chain);
-    static void UI_Component_Combo_EasingMode(const std::string_view &label, EasingMode &esMode);
     void UI_Component_Combo_Division() const;
-    void UI_Component_Combo_Easing() const;
+    static void UI_Component_Combo_EasingKind(mgxc::Chain &chain);
+    static void UI_Component_Combo_EasingMode(const std::string_view &label, EasingMode &mode);
+    static void UI_Component_Combo_Note(mgxc::Chain &chain);
+
     void UI_Component_Button_File();
 
-    template<class Container, class Creator, class Labeler, class Changed = std::nullptr_t,
-             class Extra = std::nullptr_t>
+    template<std::size_t Min = 0, bool ShowClear = false, class Container, class Creator, class Labeler,
+             class Changed = nullptr_t, class Extra = nullptr_t>
     void UI_Component_Editor_Vector(int &selIndex, Container &vec, Creator creator, Labeler labeler,
-                                    Changed changed = nullptr, Extra extra = nullptr, bool showClear = true,
-                                    int minItems = 0);
+                                    Changed changed = nullptr, Extra extra = nullptr);
 };

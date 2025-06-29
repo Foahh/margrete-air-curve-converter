@@ -6,11 +6,7 @@
 #include "Dialog.h"
 
 MargreteHandle::MargreteHandle(IMargretePluginContext *ctx) {
-    if (m_ctx == ctx) {
-        return;
-    }
     m_ctx = ctx;
-
     if (!ctx) {
         m_doc.reset();
         m_undo.reset();

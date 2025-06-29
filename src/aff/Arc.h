@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EasingSolver.h"
+#include "Easing.h"
 
 namespace aff {
     struct Arc {

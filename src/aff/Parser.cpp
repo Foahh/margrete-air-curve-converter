@@ -1,10 +1,10 @@
 #include <fstream>
+#include <iostream>
 #include <sstream>
 
 #include "Arc.h"
 #include "Parser.h"
-
-#include <iostream>
+#include "Primitive.h"
 
 namespace aff {
     void Parser::ParseSingle(const std::string &str) {
@@ -27,29 +27,26 @@ namespace aff {
             throw std::invalid_argument("Invalid arc format - not enough parameters");
         }
 
-        Arc first;
-        first.t = ParseT(parts[0]);
-        first.toT = ParseT(parts[1]);
-        if (first.Duration() < 0) {
+        Arc arc;
+        arc.t = ParseT(parts[0]);
+        arc.toT = ParseT(parts[1]);
+        if (arc.Duration() < 0) {
             throw std::invalid_argument("Invalid arc format - time length must be positive");
         }
-        if (first.Duration() == 0) {
-            first.toT = first.t + m_cctx.snap;
+        if (arc.Duration() == 0) {
+            arc.toT = arc.t + m_cctx.snap;
         }
-        first.x = ParseX(parts[2]);
-        first.toX = ParseX(parts[3]);
-        first.y = ParseY(parts[5]);
-        first.toY = ParseY(parts[6]);
-        first.type = stoi(parts[7]);
-        first.trace = parts[9] != "false";
+        arc.x = ParseX(parts[2]);
+        arc.toX = ParseX(parts[3]);
+        arc.y = ParseY(parts[5]);
+        arc.toY = ParseY(parts[6]);
+        arc.type = stoi(parts[7]);
+        arc.trace = parts[9] != "false";
 
-        FinalizeArc(parts[4], first);
-    }
-
-    void Parser::FinalizeArc(const std::string_view &str, Arc &arc) {
         using enum EasingMode;
 
-        if (const auto len = arc.Duration(); len >= 2 && str == "b") {
+        const auto len = arc.Duration();
+        if (len >= 2 && parts[4] == "b") {
             Arc first = arc;
             first.toT = arc.t + len / 2;
             first.toX = (arc.x + arc.toX) / 2;
@@ -67,29 +64,28 @@ namespace aff {
             m_arcs.push_back(first);
             m_arcs.push_back(second);
         } else {
-            if (str == "si") {
+            if (parts[4] == "si") {
                 arc.eX = In;
                 arc.eY = Linear;
-            } else if (str == "so") {
+            } else if (parts[4] == "so") {
                 arc.eX = Out;
                 arc.eY = Linear;
-            } else if (str == "sisi") {
+            } else if (parts[4] == "sisi") {
                 arc.eX = In;
                 arc.eY = In;
-            } else if (str == "soso") {
+            } else if (parts[4] == "soso") {
                 arc.eX = Out;
                 arc.eY = Out;
-            } else if (str == "siso") {
+            } else if (parts[4] == "siso") {
                 arc.eX = In;
                 arc.eY = Out;
-            } else if (str == "sosi") {
+            } else if (parts[4] == "sosi") {
                 arc.eX = Out;
                 arc.eY = In;
             } else {
                 arc.eX = Linear;
                 arc.eY = Linear;
             }
-
             m_arcs.push_back(arc);
         }
     }
@@ -112,55 +108,21 @@ namespace aff {
         return static_cast<int>(y * 100.0);
     }
 
-    void Parser::FinalizeNote() const {
-        auto &chains = m_cctx.chains;
-        if (!m_cctx.append) {
-            chains.clear();
-        }
-
-        for (const auto &chain: m_chains) {
-            std::vector<mgxc::Note> notes;
-            for (size_t i = 0; i < chain.size(); ++i) {
-                const Arc &arc = chain[i];
-
-                mgxc::Note n{};
-                n.width = m_cctx.width;
-                n.til = m_cctx.til;
-
-                n.type = arc.trace ? MP_NOTETYPE_AIRCRUSH : MP_NOTETYPE_AIRSLIDE;
-                n.t = arc.t;
-                n.x = arc.x;
-                n.eX = arc.eX;
-                n.y = arc.y;
-                n.eY = arc.eY;
-
-                notes.push_back(std::move(n));
-
-                if (i == chain.size() - 1) {
-                    n.t = arc.toT;
-                    n.x = arc.toX;
-                    n.y = arc.toY;
-                    notes.push_back(std::move(n));
-                }
-            }
-            chains.push_back(std::move(notes));
-        }
-    }
-
-    void Parser::DebugPrint() const {
-        std::cout << "Parsed " << m_cctx.chains.size() << std::endl;
+    void Print(const Config &cctx) {
+        std::cout << "Parsed " << cctx.chains.size() << std::endl;
         auto i = 0;
-        for (const auto &chain: m_cctx.chains) {
+        for (const auto &chain: cctx.chains) {
             std::cout << i++ << ":" << std::endl;
-            for (const auto &note: chain) {
-                std::cout << "  t=" << note.t << ", x=" << note.x << ", y=" << note.y
-                          << ", eX=" << static_cast<int>(note.eX) << ", eY=" << static_cast<int>(note.eY) << std::endl;
+            for (const auto &joint: chain) {
+                std::cout << "  t=" << joint.t << ", x=" << joint.x << ", y=" << joint.y
+                          << ", eX=" << static_cast<int>(joint.eX) << ", eY=" << static_cast<int>(joint.eY)
+                          << std::endl;
             }
         }
     }
 
     void Parser::Parse(const std::string &str) {
-        m_chains.clear();
+        m_archains.clear();
         m_arcs.clear();
         m_handled.clear();
 
@@ -170,17 +132,51 @@ namespace aff {
         }
 
         for (size_t i = 0; i < m_arcs.size(); ++i) {
-            if (m_handled[i]) {
+            if (m_handled[i] || HasPrecedingArc(m_arcs[i])) {
                 continue;
             }
-            if (auto chain = BuildChain(i); !chain.empty()) {
-                m_chains.push_back(std::move(chain));
+
+            std::vector<Arc> chain;
+
+            chain.push_back(m_arcs[i]);
+            m_handled[i] = true;
+
+            bool found;
+            do {
+                found = LinkArc(chain);
+            } while (found);
+
+            if (!chain.empty()) {
+                m_archains.push_back(std::move(chain));
             }
         }
 
-        FinalizeNote();
+        if (!m_cctx.append) {
+            m_cctx.chains.clear();
+        }
 
-        DebugPrint();
+        for (const auto &archain: m_archains) {
+            if (archain.empty()) {
+                continue;
+            }
+
+            mgxc::Chain chain;
+            chain.width = m_cctx.width;
+            chain.til = m_cctx.til;
+            chain.type = archain.front().trace ? MP_NOTETYPE_AIRCRUSH : MP_NOTETYPE_AIRSLIDE;
+
+            for (size_t i = 0; i < archain.size(); ++i) {
+                const Arc &arc = archain[i];
+                chain.emplace_back(arc.t, arc.x, arc.y, arc.eX, arc.eY);
+                if (i == archain.size() - 1) {
+                    chain.emplace_back(arc.toT, arc.toX, arc.toY, arc.eX, arc.eY);
+                }
+            }
+
+            m_cctx.chains.push_back(std::move(chain));
+        }
+
+        Print(m_cctx);
     }
 
     void Parser::ParseFile(const std::string &filePath) {
@@ -193,7 +189,7 @@ namespace aff {
         Parse(content);
     }
 
-    bool Parser::PushLink(std::vector<Arc> &chain) {
+    bool Parser::LinkArc(std::vector<Arc> &chain) {
         const Arc &lastArc = chain.back();
         size_t linkCount = 0;
         size_t linkIndex = m_arcs.size();
@@ -224,32 +220,16 @@ namespace aff {
         return false;
     }
 
-    bool Parser::HasPreceding(const Arc &arc) {
+    bool Parser::HasPrecedingArc(const Arc &arc) {
         for (size_t j = 0; j < m_arcs.size(); ++j) {
-            if (m_handled[j])
+            if (m_handled[j]) {
                 continue;
+            }
             if (m_arcs[j].CanLinkWith(arc)) {
                 return true;
             }
         }
         return false;
-    }
-
-    std::vector<Arc> Parser::BuildChain(const size_t startIndex) {
-        if (HasPreceding(m_arcs[startIndex])) {
-            return {};
-        }
-
-        std::vector<Arc> chain;
-        chain.push_back(m_arcs[startIndex]);
-        m_handled[startIndex] = true;
-
-        bool found;
-        do {
-            found = PushLink(chain);
-        } while (found);
-
-        return chain;
     }
 
     void Parser::ParseBpm(const std::string &token) {
