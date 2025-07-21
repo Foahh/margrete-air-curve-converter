@@ -1,31 +1,3 @@
-<#
-.SYNOPSIS
-    Build and/or package the air_curve_conv project using CMake.
-
-.DESCRIPTION
-    This script automates the build process for the air_curve_conv project.
-
-.PARAMETER Preset
-    The CMake preset to use for building the project. Default is 'release'.
-
-.PARAMETER Build
-    If specified, the script will build the project using the specified CMake preset.
-
-.PARAMETER Release
-    If specified, the script will prepare the project for release by copying necessary files and creating a zip package.
-#>
-
-param (
-    [Alias('p')]
-    [string] $Preset = 'release',
-
-    [Alias('b')]
-    [switch] $Build,
-
-    [Alias('r')]
-    [switch] $Release
-)
-
 function Invoke-Checked {
     param([string] $CommandLine)
 
@@ -71,57 +43,48 @@ function Import-VcVars64 {
     }
 }
 
-if (-not $Build -and -not $Publish) {
-    $Build = $true
-    $Publish = $true
-}
-
 $ErrorActionPreference = 'Stop'
 
 try {
-    if ($Build) { Import-VcVars64 }
+    Import-VcVars64
 
     $ProjectName = (Get-Content -Path (Join-Path $PSScriptRoot 'config/PROJECT') -Raw).Trim()
     $ProjectVersion = (Get-Content -Path (Join-Path $PSScriptRoot 'config/VERSION') -Raw).Trim()
 
+    $Target = 'Release'
     $RepoRoot = $PSScriptRoot
-    $OutDir = Join-Path $RepoRoot 'out'
-    $BuildDir = Join-Path $OutDir 'build'
-    $BinDir = Join-Path $BuildDir $Preset
-    $PublishDir = Join-Path $OutDir 'publish'
-    $PublishZip = Join-Path $OutDir "$ProjectName-$ProjectVersion-$Preset.zip"
+    $BuildDir = Join-Path $RepoRoot 'build'
+    $PublishDir = Join-Path $RepoRoot 'publish'
+    $PublishZip = Join-Path $PublishDir "$ProjectName-$ProjectVersion-$Target.zip"
 
-    if ($Build) {
-        Write-Host "`n==> Configuring & Building '$Preset'"
-        Invoke-Checked "cmake --preset $Preset"
-        Invoke-Checked "cmake --build --preset $Preset"
-    }
+    Write-Host "`n==> Configuring & Building $Target"
+    Invoke-Checked "cmake --preset vcpkg"
+    Invoke-Checked "cmake --build build --config $Target"
 
-    if ($Publish) {
-        Write-Host "`n==> Preparing '$PublishDir'"
-        Remove-Item $PublishDir -Recurse -Force -ErrorAction SilentlyContinue
-        New-Item -ItemType Directory -Path $PublishDir | Out-Null
+    Write-Host "`n==> Preparing '$PublishDir'"
+    Remove-Item $PublishDir -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path $PublishDir | Out-Null`
 
-        Write-Host "==> Copying"
-        Copy-Item (Join-Path $BinDir 'main.dll') (Join-Path $PublishDir "$ProjectName.dll")
-        Copy-Item (Join-Path $BinDir 'main.ini') (Join-Path $PublishDir "$ProjectName.ini")
+    Write-Host "==> Copying"
+    Copy-Item (Join-Path $BuildDir $Target 'main.dll') (Join-Path $PublishDir "$ProjectName.dll")
+    Copy-Item (Join-Path $BuildDir 'main.ini') (Join-Path $PublishDir "$ProjectName.ini")
 
-        $TrackedFiles = git -C $RepoRoot ls-files aff
-        foreach ($File in $TrackedFiles) {
-            if ($File -like '.gitignore') { continue }
-            $SourcePath = Join-Path $RepoRoot   $File
-            $DestinationPath = Join-Path $PublishDir $File
-            $DestinationDir = Split-Path $DestinationPath -Parent
-            if (-not (Test-Path $DestinationDir)) {
-                New-Item -ItemType Directory -Force -Path $DestinationDir | Out-Null
-            }
-            Copy-Item $SourcePath $DestinationPath
+    $TrackedFiles = git -C $RepoRoot ls-files aff
+    foreach ($File in $TrackedFiles) {
+        if ($File -like '.gitignore') { continue }
+        $SourcePath = Join-Path $RepoRoot $File
+        $DestinationPath = Join-Path $PublishDir $File
+        $DestinationDir = Split-Path $DestinationPath -Parent
+        if (-not (Test-Path $DestinationDir)) {
+            New-Item -ItemType Directory -Force -Path $DestinationDir | Out-Null
         }
-
-        Write-Host "==> Packaging '$PublishZip'"
-        if (Test-Path $PublishZip) { Remove-Item $PublishZip -Force }
-        Compress-Archive -Path "$PublishDir\*" -DestinationPath $PublishZip -CompressionLevel Optimal
+        Copy-Item $SourcePath $DestinationPath
     }
+
+    Write-Host "==> Packaging '$PublishZip'"
+    if (Test-Path $PublishZip) { Remove-Item $PublishZip -Force }
+    Compress-Archive -Path "$PublishDir\*" -DestinationPath $PublishZip -CompressionLevel Optimal
+ 
 
     Write-Host "`n==> Done."
 }

@@ -422,7 +422,7 @@ CMakeUserPresets.json
 
 #cmake-build-*
 
-out
+build/
 .idea/
 
 # aff related

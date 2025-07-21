@@ -1,4 +1,3 @@
-#define NOMINMAX
 #include <atlbase.h>
 
 #include <algorithm>
@@ -407,7 +406,7 @@ void Dialog::UI_Panel_Editor_Control() {
 
         const auto pT = note.t;
         if (ImGui::InputInt("t", &note.t)) {
-            note.t = std::max(note.t, 0);
+            note.t = (std::max)(note.t, 0);
             if (note.t != pT) {
                 SelChain_Sort();
             }

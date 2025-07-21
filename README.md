@@ -23,11 +23,11 @@ cd margrete-air-curve-converter
 
 ### 2. Install Prerequisites
 
-| Tool                            | How to get it                                                                                                                                                                                                                                                                                                                                                   |
-|---------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **MSVC (Microsoft Visual C++)** | • Open **Visual Studio Installer** → select **Desktop development with C++** workload.<br> _or_<br>• Install the stand-alone **MSVC Build Tools** + **Windows SDK** (no full VS IDE required).                                                                                                                                                                  |
-| **CMake**                       | • If you chose **Desktop development with C++**, CMake is already installed.<br> _or_<br>• Install via **Visual Studio Installer** → Individual components → **CMake**.<br> _or_<br>• Download binaries from <https://cmake.org/download/> and add them to `PATH`.<br> _or_<br>• Use a package manager: `winget install Kitware.CMake` / `choco install cmake`. |
-| **vcpkg**                       | • Install via **Visual Studio Installer** → Individual components → **vcpkg**.<br> _or_<br>• Install manually: clone the repo and run the bootstrap script (see the "Install and use packages with CMake" [tutorial](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started?pivots=shell-powershell)).                                                 |
+| Tool                            | How to get it                                                                          |
+| ------------------------------- | -------------------------------------------------------------------------------------- |
+| **MSVC (Microsoft Visual C++)** | • Open **Visual Studio Installer** → select **Desktop development with C++** workload. |
+| **CMake**                       | • If you chose **Desktop development with C++**, CMake is already installed.           |
+| **vcpkg**                       | • Install via **Visual Studio Installer** → Individual components → **vcpkg**.         |
 
 ### 3. Run the build script
 
@@ -36,21 +36,16 @@ cd margrete-air-curve-converter
 3. Execute:
 
 ```powershell
-./build.ps1 -b -p release   
+./build.ps1 
 ```
-
-- `-b` tells the script to **build**.
-- `-p` chooses the **build profile** (`Debug` or `Release`).
 
 ### 4. Locate the output
 
 The compiled DLL is placed in:
 
 ```txt
-out/build/<profile>/
+build/Release/
 ```
-
-where `<profile>` is `Debug` or `Release`, matching the profile you selected.
 
 ## Development
 
