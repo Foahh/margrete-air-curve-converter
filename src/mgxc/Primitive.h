@@ -72,7 +72,7 @@ namespace mgxc {
          * @return Snapped Joint.
          */
         Joint Snap(const MpInteger snap) const {
-            const auto sT = utils::iround(static_cast<double>(t) / snap);
+            const int sT = utils::iround(static_cast<double>(t) / snap);
             return Joint{sT, x, y, eX, eY};
         }
 
@@ -143,7 +143,7 @@ namespace mgxc::data {
         oss << std::format("[{},{},{},{},{}]\n", chain.type, chain.width, chain.til, static_cast<char>(chain.es.m_kind),
                            chain.es.m_param);
 
-        for (const auto &n: chain) {
+        for (const Joint &n: chain) {
             oss << Serialize(n);
         }
         return oss.str();
@@ -155,7 +155,7 @@ namespace mgxc::data {
         }
 
         std::ostringstream oss;
-        for (const auto &c: chains) {
+        for (const Chain &c: chains) {
             oss << Serialize(c);
             if (&c != &chains.back()) {
                 oss << "\n";

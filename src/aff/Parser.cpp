@@ -45,7 +45,7 @@ namespace aff {
 
         using enum EasingMode;
 
-        const auto len = arc.Duration();
+        const int len = arc.Duration();
         if (len >= 2 && parts[4] == "b") {
             Arc first = arc;
             first.toT = arc.t + len / 2;
@@ -110,10 +110,10 @@ namespace aff {
 
     void Print(const Config &cctx) {
         std::cout << "Parsed " << cctx.chains.size() << std::endl;
-        auto i = 0;
-        for (const auto &chain: cctx.chains) {
+        int i = 0;
+        for (const mgxc::Chain &chain: cctx.chains) {
             std::cout << i++ << ":" << std::endl;
-            for (const auto &joint: chain) {
+            for (const mgxc::Joint &joint: chain) {
                 std::cout << "  t=" << joint.t << ", x=" << joint.x << ", y=" << joint.y
                           << ", eX=" << static_cast<int>(joint.eX) << ", eY=" << static_cast<int>(joint.eY)
                           << std::endl;
@@ -155,7 +155,7 @@ namespace aff {
             m_cctx.chains.clear();
         }
 
-        for (const auto &archain: m_archains) {
+        for (const std::vector<Arc> &archain: m_archains) {
             if (archain.empty()) {
                 continue;
             }

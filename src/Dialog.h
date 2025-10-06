@@ -128,7 +128,7 @@ private:
     void UI_Panel_Editor_Control();
 
     void UI_Component_Combo_Division() const;
-    static void UI_Component_Combo_EasingKind(mgxc::Chain &chain);
+    static void UI_Component_Combo_EasingKind(const mgxc::Chain &chain);
     static void UI_Component_Combo_EasingMode(const std::string_view &label, EasingMode &mode);
     static void UI_Component_Combo_Note(mgxc::Chain &chain);
 

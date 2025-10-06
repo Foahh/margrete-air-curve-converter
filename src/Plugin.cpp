@@ -9,7 +9,7 @@
 MpInteger Plugin::addRef() noexcept { return ++m_refCount; }
 
 MpInteger Plugin::release() noexcept {
-    const auto i = --m_refCount;
+    const int i = --m_refCount;
     if (i == 0) {
         delete this;
     }

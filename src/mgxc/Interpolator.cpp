@@ -34,7 +34,7 @@ void Interpolator::PushSegment(const mgxc::Chain &chain, const mgxc::Joint &curr
         return;
     }
 
-    auto &last = m_noteChain.back();
+    MP_NOTEINFO &last = m_noteChain.back();
     if (last.x == base.x && last.height == base.y && last.tick == base.t) {
         return;
     }
@@ -66,7 +66,7 @@ void Interpolator::VerticalSegment(const mgxc::Chain &chain, const mgxc::Joint &
     const double dY = next.y - curr.y;
     const int sY = utils::step(dY);
 
-    auto base = curr;
+    mgxc::Joint base = curr;
     for (int y = curr.y; sY > 0 ? y <= next.y : y >= next.y; y += sY) {
         const double pY = (y - curr.y) / dY;
         const double fPY = chain.es.InverseSolve(pY, curr.eY);
@@ -85,7 +85,7 @@ void Interpolator::HorizontalSegment(const mgxc::Chain &chain, const mgxc::Joint
     const double dY = next.y - curr.y;
     const int sX = utils::step(dX);
 
-    auto base = curr;
+    mgxc::Joint base = curr;
     for (int x = curr.x; sX > 0 ? x <= next.x : x >= next.x; x += sX) {
         const double pX = (x - curr.x) / dX;
         const double fPX = chain.es.InverseSolve(pX, curr.eX);
@@ -110,7 +110,7 @@ void Interpolator::InterpolateChain(std::size_t idx) {
         throw std::out_of_range(std::format("Invalid chain index: {}", idx));
     }
 
-    const auto &chain = m_cctx.chains[idx];
+    const mgxc::Chain &chain = m_cctx.chains[idx];
     if (chain.size() < 2) {
         throw std::invalid_argument(std::format("Chain [{}] must have at least 2 notes", idx));
     }
@@ -141,7 +141,7 @@ void Interpolator::InterpolateChain(std::size_t idx) {
         PushSegment(chain, curr, next, next);
     }
 
-    for (auto &note: m_noteChain) {
+    for (MP_NOTEINFO &note: m_noteChain) {
         note.tick *= m_cctx.snap;
         note.tick += m_cctx.tOffset;
         note.x += m_cctx.xOffset;
@@ -160,9 +160,9 @@ void Interpolator::InterpolateChain(std::size_t idx) {
 void Print(const std::vector<std::vector<MP_NOTEINFO>> &chains) {
     std::cout << std::endl << "Interpolated " << chains.size() << std::endl;
     int i = 0;
-    for (const auto &chain: chains) {
+    for (const std::vector<MP_NOTEINFO> &chain: chains) {
         std::cout << i++ << ":" << std::endl;
-        for (const auto &note: chain) {
+        for (const MP_NOTEINFO &note: chain) {
             std::cout << "  a=" << note.longAttr << ", t=" << note.tick << ", x=" << note.x << ", h=" << note.height
                       << std::endl;
         }
@@ -197,8 +197,8 @@ void Interpolator::Commit(const MargreteHandle &mg) const {
 
     try {
         mg.BeginRecording();
-        const auto chart = mg.GetChart();
-        for (const auto &chain: m_noteChains) {
+        const MgComPtr<IMargretePluginChart> chart = mg.GetChart();
+        for (const std::vector<MP_NOTEINFO> &chain: m_noteChains) {
             CommitChain(chart, chain);
         }
         mg.CommitRecording();
@@ -210,12 +210,12 @@ void Interpolator::Commit(const MargreteHandle &mg) const {
 
 void Interpolator::CommitChain(const MargreteComPtr<IMargretePluginChart> &p_chart,
                                const std::vector<MP_NOTEINFO> &chain) {
-    const auto &airHead = chain.front();
+    const MP_NOTEINFO &airHead = chain.front();
 
-    const auto longBegin = CreateNote(p_chart);
+    const MargreteComPtr<IMargretePluginNote> longBegin = CreateNote(p_chart);
     longBegin->setInfo(&airHead);
     for (size_t i = 1; i < chain.size(); ++i) {
-        auto airControl = CreateNote(p_chart);
+        MargreteComPtr<IMargretePluginNote> airControl = CreateNote(p_chart);
         airControl->setInfo(&chain[i]);
         longBegin->appendChild(airControl.get());
     }
@@ -226,13 +226,13 @@ void Interpolator::CommitChain(const MargreteComPtr<IMargretePluginChart> &p_cha
         info.longAttr = MP_NOTELONGATTR_NONE;
         info.direction = MP_NOTEDIR_NONE;
 
-        const auto tap = CreateNote(p_chart);
+        const MargreteComPtr<IMargretePluginNote> tap = CreateNote(p_chart);
         tap->setInfo(&info);
 
         info.type = MP_NOTETYPE_AIR;
         info.direction = MP_NOTEDIR_UP;
 
-        const auto air = CreateNote(p_chart);
+        const MargreteComPtr<IMargretePluginNote> air = CreateNote(p_chart);
         air->setInfo(&info);
 
         air->appendChild(longBegin.get());

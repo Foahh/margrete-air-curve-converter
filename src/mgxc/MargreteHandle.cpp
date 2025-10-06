@@ -13,7 +13,7 @@ MargreteHandle::MargreteHandle(IMargretePluginContext *ctx) {
         return;
     }
 
-    auto result = m_ctx->getDocument(m_doc.put());
+    MpBoolean result = m_ctx->getDocument(m_doc.put());
     if (result != MP_TRUE) {
         m_doc.reset();
     }
@@ -36,7 +36,7 @@ MgComPtr<IMargretePluginChart> MargreteHandle::GetChart() const {
     }
 
     MgComPtr<IMargretePluginChart> chart;
-    const auto result = m_doc->getChart(chart.put());
+    const MpBoolean result = m_doc->getChart(chart.put());
     if (result != MP_TRUE) {
         throw std::runtime_error("Failed to get IMargretePluginChart from IMargretePluginDocument");
     }
