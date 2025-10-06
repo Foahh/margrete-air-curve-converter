@@ -63,17 +63,22 @@ try {
 
     Write-Host "`n==> Preparing '$PublishDir'"
     Remove-Item $PublishDir -Recurse -Force -ErrorAction SilentlyContinue
-    New-Item -ItemType Directory -Path $PublishDir | Out-Null`
+    New-Item -ItemType Directory -Path $PublishDir | Out-Null
 
     Write-Host "==> Copying"
-    Copy-Item (Join-Path $BuildDir $Target 'main.dll') (Join-Path $PublishDir "$ProjectName.dll")
-    Copy-Item (Join-Path $BuildDir 'main.ini') (Join-Path $PublishDir "$ProjectName.ini")
+    $sourceDll = Join-Path (Join-Path $BuildDir -ChildPath $Target) -ChildPath 'main.dll'
+    $targetDll = Join-Path $PublishDir -ChildPath "$ProjectName.dll"
+    Copy-Item $sourceDll $targetDll
+
+    $sourceIni = Join-Path $BuildDir -ChildPath 'main.ini'
+    $targetIni = Join-Path $PublishDir -ChildPath "$ProjectName.ini"
+    Copy-Item $sourceIni $targetIni
 
     $TrackedFiles = git -C $RepoRoot ls-files aff
     foreach ($File in $TrackedFiles) {
         if ($File -like '.gitignore') { continue }
-        $SourcePath = Join-Path $RepoRoot $File
-        $DestinationPath = Join-Path $PublishDir $File
+        $SourcePath = Join-Path $RepoRoot -ChildPath $File
+        $DestinationPath = Join-Path $PublishDir -ChildPath $File
         $DestinationDir = Split-Path $DestinationPath -Parent
         if (-not (Test-Path $DestinationDir)) {
             New-Item -ItemType Directory -Force -Path $DestinationDir | Out-Null
@@ -85,7 +90,6 @@ try {
     if (Test-Path $PublishZip) { Remove-Item $PublishZip -Force }
     Compress-Archive -Path "$PublishDir\*" -DestinationPath $PublishZip -CompressionLevel Optimal
  
-
     Write-Host "`n==> Done."
 }
 catch {
