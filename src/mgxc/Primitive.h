@@ -13,40 +13,78 @@
 #include "Utils.h"
 
 namespace mgxc {
+    /**
+     * @brief Number of ticks in a bar.
+     */
     constexpr MpInteger BAR_TICKS = 1920;
+    /**
+     * @brief Number of ticks in a beat.
+     */
     constexpr MpInteger BEAT_TICKS = BAR_TICKS / 4;
 
+    /**
+     * @class Joint
+     * @brief Represents a note/control point in a chain.
+     *
+     * Stores timing, position, and easing information for a single point.
+     */
     class Joint {
     public:
-        MpInteger t{0};
-        MpInteger x{0};
-        MpInteger y{80};
-        EasingMode eX{EasingMode::Linear};
-        EasingMode eY{EasingMode::Linear};
+        MpInteger t{0}; /**< Tick position. */
+        MpInteger x{0}; /**< X position. */
+        MpInteger y{80}; /**< Y position. */
+        EasingMode eX{EasingMode::Linear}; /**< Easing mode for X. */
+        EasingMode eY{EasingMode::Linear}; /**< Easing mode for Y. */
 
+        /**
+         * @brief Default constructor.
+         */
         explicit Joint() = default;
 
+        /**
+         * @brief Constructs a Joint with all fields specified.
+         * @param t Tick position.
+         * @param x X position.
+         * @param y Y position.
+         * @param eX Easing mode for X.
+         * @param eY Easing mode for Y.
+         */
         explicit Joint(const MpInteger t, const MpInteger x, const MpInteger y, const EasingMode eX,
                        const EasingMode eY) : t(t), x(x), y(y), eX(eX), eY(eY) {}
 
+        /**
+         * @brief Equality operator for Joint.
+         */
         friend bool operator==(const Joint &a, const Joint &b) {
             return std::tie(a.t, a.x, a.y) == std::tie(b.t, b.x, b.y);
         }
 
+        /**
+         * @brief Three-way comparison operator for Joint.
+         */
         friend auto operator<=>(const Joint &a, const Joint &b) {
             return std::tie(a.t, a.x, a.y) <=> std::tie(b.t, b.x, b.y);
         }
 
+        /**
+         * @brief Returns a Joint snapped to the given tick value.
+         * @param snap Snap value.
+         * @return Snapped Joint.
+         */
         Joint Snap(const MpInteger snap) const {
             const auto sT = utils::iround(static_cast<double>(t) / snap);
             return Joint{sT, x, y, eX, eY};
         }
 
+        /**
+         * @brief Gets the unique ID of the Joint.
+         * @return The unique ID.
+         */
         std::size_t GetID() const noexcept { return id; }
 
     private:
-        inline static std::atomic_size_t nextId{0};
-        std::size_t id{nextId++};
+        inline static std::atomic_size_t nextId{0}; /**< Static counter for unique IDs. */
+        std::size_t id{nextId++}; /**< Unique ID for this Joint. */
     };
 
     class Chain {

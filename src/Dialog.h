@@ -13,8 +13,17 @@
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
+/**
+ * @class Dialog
+ * @brief Main dialog window for the Margrete Air Curve Converter plugin.
+ *
+ * Handles window messages, user interaction, and ImGui-based UI rendering.
+ */
 class Dialog final : public CWindowImpl<Dialog> {
 public:
+    /**
+     * @brief Declares the window class and its properties.
+     */
     DECLARE_WND_CLASS_EX(L"ImGuiWindowClass", CS_HREDRAW | CS_VREDRAW, COLOR_WINDOW)
 
     BEGIN_MSG_MAP(Dialog)
@@ -24,29 +33,57 @@ public:
     MESSAGE_RANGE_HANDLER(0, 0xFFFF, OnRange)
     END_MSG_MAP()
 
+    /**
+     * @brief Shows the dialog window.
+     * @return HRESULT indicating success or failure.
+     */
     HRESULT ShowDialog();
+    /**
+     * @brief Displays a UI error message.
+     */
     void UI_Error();
 
     Dialog(const Dialog &) = delete;
     Dialog &operator=(const Dialog &) = delete;
+    /**
+     * @brief Constructs the Dialog.
+     * @param cctx Reference to the configuration context.
+     * @param p_ctx Pointer to the plugin context.
+     * @param st Stop token for thread management.
+     */
     explicit Dialog(Config &cctx, IMargretePluginContext *p_ctx, std::stop_token st);
 
+    /**
+     * @brief Checks if the dialog is running.
+     * @return True if running, false otherwise.
+     */
     bool IsRunning() const noexcept;
 
 private:
+    /**
+     * @brief Renders the ImGui UI.
+     */
     void RenderImGui();
 
     // State
+    /** Indicates if the dialog is running. */
     bool m_running{false};
+    /** Stop token for cooperative cancellation. */
     std::stop_token m_st;
 
+    /** Width of the child window. */
     float m_childWidth{235.0f};
+    /** Height of the child window. */
     float m_childHeight{150.0f};
 
+    /** Selected chain index. */
     int m_selChain{-1};
+    /** Selected control index. */
     int m_selControl{-1};
 
+    /** Margrete handle for plugin context. */
     MargreteHandle m_mg;
+    /** Reference to the configuration context. */
     Config &m_cctx;
 
     bool m_showErrorPopup = false;

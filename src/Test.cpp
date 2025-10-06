@@ -9,6 +9,9 @@
 static Config g_cctx;
 static IMargretePluginContext *g_ctx = nullptr;
 
+/**
+ * @test Parses an .aff file and runs interpolation on the parsed data.
+ */
 TEST_CASE("Parse & Interpolate") {
     auto parser = aff::Parser(g_cctx);
     parser.ParseFile("../../../aff/2.aff");
@@ -17,11 +20,17 @@ TEST_CASE("Parse & Interpolate") {
     intp.Convert();
 }
 
+/**
+ * @test Shows the dialog once and checks for successful display.
+ */
 TEST_CASE("Show Once") {
     auto dlg = Dialog(g_cctx, g_ctx, std::stop_token{});
     REQUIRE(dlg.ShowDialog() == S_OK);
 }
 
+/**
+ * @test Starts the dialog in a thread, requests stop, and checks if it stops correctly.
+ */
 TEST_CASE("Stop Dialog") {
     std::atomic_bool flag{false};
 
