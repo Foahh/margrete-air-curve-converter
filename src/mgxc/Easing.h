@@ -16,7 +16,7 @@ enum class EasingMode {
  * @enum EasingKind
  * @brief Enumerates the available kinds of easing functions.
  */
-enum class EasingKind {
+enum class EasingKind : char {
     Sine = 's',
     Power = 'p',
     Circular = 'c',

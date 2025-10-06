@@ -434,8 +434,8 @@ void Dialog::UI_Panel_Editor_Control() {
 
 
 template<std::size_t Min, bool ShowClear, class Container, class Creator, class Labeler, class Changed, class Extra>
-void Dialog::UI_Component_Editor_Vector(int &selIndex, Container &vec, Creator creator, Labeler labeler,
-                                        Changed changed, Extra extra) {
+void Dialog::UI_Component_Editor_Vector(int &selIndex, Container &vec, const Creator &creator, const Labeler &labeler,
+                                        const Changed &changed, const Extra &extra) {
     if (ImGui::SmallButton("+")) {
         vec.push_back(std::move(creator()));
         selIndex = static_cast<int>(vec.size()) - 1;

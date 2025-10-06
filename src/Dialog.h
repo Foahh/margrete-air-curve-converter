@@ -136,6 +136,6 @@ private:
 
     template<std::size_t Min = 0, bool ShowClear = false, class Container, class Creator, class Labeler,
              class Changed = nullptr_t, class Extra = nullptr_t>
-    void UI_Component_Editor_Vector(int &selIndex, Container &vec, Creator creator, Labeler labeler,
-                                    Changed changed = nullptr, Extra extra = nullptr);
+    void UI_Component_Editor_Vector(int &selIndex, Container &vec, const Creator &creator, const Labeler &labeler,
+                                    const Changed &changed = nullptr, const Extra &extra = nullptr);
 };

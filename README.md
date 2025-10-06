@@ -24,7 +24,7 @@ cd margrete-air-curve-converter
 ### 2. Install Prerequisites
 
 | Tool                            | How to get it                                                                          |
-| ------------------------------- | -------------------------------------------------------------------------------------- |
+|---------------------------------|----------------------------------------------------------------------------------------|
 | **MSVC (Microsoft Visual C++)** | • Open **Visual Studio Installer** → select **Desktop development with C++** workload. |
 | **CMake**                       | • If you chose **Desktop development with C++**, CMake is already installed.           |
 | **vcpkg**                       | • Install via **Visual Studio Installer** → Individual components → **vcpkg**.         |

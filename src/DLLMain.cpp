@@ -5,7 +5,7 @@
 #include "Plugin.h"
 #include "meta.h"
 
-BOOL APIENTRY DllMain(const HMODULE hModule, const DWORD ulReasonForCall, LPVOID lpReserved) {
+BOOL APIENTRY DllMain(const HMODULE hModule, const DWORD ulReasonForCall, LPVOID) {
     if (ulReasonForCall == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(hModule);
     }
