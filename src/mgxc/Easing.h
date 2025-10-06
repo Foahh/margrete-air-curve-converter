@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 enum class EasingMode {
     Linear = '-',
     In = 'i',
