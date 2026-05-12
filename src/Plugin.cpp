@@ -1,7 +1,8 @@
 #include "Plugin.h"
-#include <memory>
+
+#include <cstring>
 #include <meta.h>
-#include <mutex>
+#include <stdexcept>
 #include <windows.h>
 
 #include "Dialog.h"
@@ -35,7 +36,11 @@ MpBoolean Plugin::getCommandName(wchar_t *text, const MpInteger textLength) cons
 }
 
 MpBoolean Plugin::invoke(IMargretePluginContext *p_ctx) {
-    if (m_running.exchange(true, std::memory_order_acquire)) {
+    if (p_ctx == nullptr) {
+        return MP_FALSE;
+    }
+
+    if (m_running.exchange(true, std::memory_order_acq_rel)) {
         return MP_FALSE;
     }
 
@@ -43,8 +48,8 @@ MpBoolean Plugin::invoke(IMargretePluginContext *p_ctx) {
 
     m_worker = std::jthread([this, p_ctx](const std::stop_token &token) {
         try {
-            Dialog dlg(m_cctx, p_ctx, token);
-            if (FAILED(dlg.ShowDialog())) {
+            Dialog dialog(m_cctx, p_ctx, token);
+            if (FAILED(dialog.ShowDialog())) {
                 throw std::runtime_error("Failed to show plugin dialog...");
             }
         } catch (const std::exception &e) {
@@ -64,5 +69,4 @@ Plugin::~Plugin() {
         m_worker.request_stop();
         m_worker.join();
     }
-    release();
 }

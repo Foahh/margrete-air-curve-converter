@@ -30,6 +30,10 @@ DLLEXPORT void WINAPI MargretePluginGetInfo(MP_PLUGININFO *info) {
 }
 
 DLLEXPORT MpBoolean WINAPI MargretePluginCommandCreate(IMargretePluginCommand **ppobj) {
+    if (ppobj == nullptr) {
+        return MP_FALSE;
+    }
+
     *ppobj = new Plugin();
     (*ppobj)->addRef();
     return MP_TRUE;
