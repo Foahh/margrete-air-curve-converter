@@ -72,6 +72,7 @@ function(build_main_library)
             src/DLLMain.cpp
             src/aff/Parser.cpp
             src/Dialog.cpp
+            src/Dialog.UI.cpp
             src/mgxc/Interpolator.cpp
             src/mgxc/Easing.cpp
             src/mgxc/MargreteHandle.cpp
@@ -87,6 +88,7 @@ function(build_tests)
             src/Test.cpp
             src/aff/Parser.cpp
             src/Dialog.cpp
+            src/Dialog.UI.cpp
             src/mgxc/Interpolator.cpp
             src/mgxc/Easing.cpp
             src/mgxc/MargreteHandle.cpp

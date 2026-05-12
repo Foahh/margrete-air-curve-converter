@@ -106,10 +106,12 @@ private:
     // Helper
     template<class F, class... Args>
     bool Catch(F &&f, Args &&...args);
+    void ShowError(std::string text);
+    bool TryImportAffFile(const std::string &filePath);
     void Commit(int idx = -1);
     void SelChain_Sort();
-    constexpr bool SelChain_InRange() const noexcept;
-    constexpr bool SelControl_InRange() const noexcept;
+    bool SelChain_InRange() const noexcept;
+    bool SelControl_InRange() const noexcept;
 
     // UI
     void UI_Main();
@@ -127,8 +129,8 @@ private:
     void UI_Panel_Selector_Controls();
     void UI_Panel_Editor_Control();
 
-    void UI_Component_Combo_Division() const;
-    static void UI_Component_Combo_EasingKind(const mgxc::Chain &chain);
+    void UI_Component_Combo_Division();
+    static void UI_Component_Combo_EasingKind(mgxc::Chain &chain);
     static void UI_Component_Combo_EasingMode(const std::string_view &label, EasingMode &mode);
     static void UI_Component_Combo_Note(mgxc::Chain &chain);
 
