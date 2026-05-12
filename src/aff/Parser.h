@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "Arc.h"
@@ -50,6 +51,9 @@ namespace aff {
          * @param str The string to parse.
          */
         void ParseSingle(const std::string &str);
+        void ResetState();
+        void AppendChainsToConfig() const;
+        void ParseArcEasing(Arc &arc, std::string_view easing);
 
         /**
          * @brief Attempts to link arcs into a chain.

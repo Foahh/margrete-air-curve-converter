@@ -7,6 +7,18 @@
 #include "Primitive.h"
 
 namespace aff {
+    namespace {
+        std::vector<std::string> Split(const std::string &text, const char delimiter) {
+            std::vector<std::string> parts;
+            std::stringstream stream(text);
+            std::string part;
+            while (getline(stream, part, delimiter)) {
+                parts.push_back(part);
+            }
+            return parts;
+        }
+    } // namespace
+
     void Parser::ParseSingle(const std::string &str) {
         const size_t start = str.find('(');
         const size_t end = str.rfind(')');
@@ -15,13 +27,7 @@ namespace aff {
         }
 
         const std::string content = str.substr(start + 1, end - start - 1);
-        std::vector<std::string> parts;
-        std::stringstream ss(content);
-        std::string part;
-
-        while (getline(ss, part, ',')) {
-            parts.push_back(part);
-        }
+        const std::vector<std::string> parts = Split(content, ',');
 
         if (parts.size() < 10) {
             throw std::invalid_argument("Invalid arc format - not enough parameters");
@@ -43,50 +49,85 @@ namespace aff {
         arc.type = stoi(parts[7]);
         arc.trace = parts[9] != "false";
 
-        using enum EasingMode;
-
         const int len = arc.Duration();
         if (len >= 2 && parts[4] == "b") {
             Arc first = arc;
             first.toT = arc.t + len / 2;
             first.toX = (arc.x + arc.toX) / 2;
             first.toY = (arc.y + arc.toY) / 2;
-            first.eX = Out;
-            first.eY = Out;
+            ParseArcEasing(first, "so");
 
             Arc second = arc;
             second.t = first.toT;
             second.x = first.toX;
             second.y = first.toY;
-            second.eX = In;
-            second.eY = In;
+            ParseArcEasing(second, "si");
 
             m_arcs.push_back(first);
             m_arcs.push_back(second);
         } else {
-            if (parts[4] == "si") {
-                arc.eX = In;
-                arc.eY = Linear;
-            } else if (parts[4] == "so") {
-                arc.eX = Out;
-                arc.eY = Linear;
-            } else if (parts[4] == "sisi") {
-                arc.eX = In;
-                arc.eY = In;
-            } else if (parts[4] == "soso") {
-                arc.eX = Out;
-                arc.eY = Out;
-            } else if (parts[4] == "siso") {
-                arc.eX = In;
-                arc.eY = Out;
-            } else if (parts[4] == "sosi") {
-                arc.eX = Out;
-                arc.eY = In;
-            } else {
-                arc.eX = Linear;
-                arc.eY = Linear;
-            }
+            ParseArcEasing(arc, parts[4]);
             m_arcs.push_back(arc);
+        }
+    }
+
+    void Parser::ResetState() {
+        m_archains.clear();
+        m_arcs.clear();
+        m_handled.clear();
+    }
+
+    void Parser::AppendChainsToConfig() const {
+        if (!m_cctx.append) {
+            m_cctx.chains.clear();
+        }
+
+        for (const std::vector<Arc> &archain: m_archains) {
+            if (archain.empty()) {
+                continue;
+            }
+
+            mgxc::Chain chain;
+            chain.width = m_cctx.width;
+            chain.til = m_cctx.til;
+            chain.type = archain.front().trace ? MP_NOTETYPE_AIRCRUSH : MP_NOTETYPE_AIRSLIDE;
+
+            for (std::size_t i = 0; i < archain.size(); ++i) {
+                const Arc &arc = archain[i];
+                chain.emplace_back(arc.t, arc.x, arc.y, arc.eX, arc.eY);
+                if (i == archain.size() - 1) {
+                    chain.emplace_back(arc.toT, arc.toX, arc.toY, arc.eX, arc.eY);
+                }
+            }
+
+            m_cctx.chains.push_back(std::move(chain));
+        }
+    }
+
+    void Parser::ParseArcEasing(Arc &arc, const std::string_view easing) {
+        using enum EasingMode;
+
+        if (easing == "si") {
+            arc.eX = In;
+            arc.eY = Linear;
+        } else if (easing == "so") {
+            arc.eX = Out;
+            arc.eY = Linear;
+        } else if (easing == "sisi") {
+            arc.eX = In;
+            arc.eY = In;
+        } else if (easing == "soso") {
+            arc.eX = Out;
+            arc.eY = Out;
+        } else if (easing == "siso") {
+            arc.eX = In;
+            arc.eY = Out;
+        } else if (easing == "sosi") {
+            arc.eX = Out;
+            arc.eY = In;
+        } else {
+            arc.eX = Linear;
+            arc.eY = Linear;
         }
     }
 
@@ -122,9 +163,7 @@ namespace aff {
     }
 
     void Parser::Parse(const std::string &str) {
-        m_archains.clear();
-        m_arcs.clear();
-        m_handled.clear();
+        ResetState();
 
         ParseString(str);
         if (m_arcs.empty()) {
@@ -151,30 +190,7 @@ namespace aff {
             }
         }
 
-        if (!m_cctx.append) {
-            m_cctx.chains.clear();
-        }
-
-        for (const std::vector<Arc> &archain: m_archains) {
-            if (archain.empty()) {
-                continue;
-            }
-
-            mgxc::Chain chain;
-            chain.width = m_cctx.width;
-            chain.til = m_cctx.til;
-            chain.type = archain.front().trace ? MP_NOTETYPE_AIRCRUSH : MP_NOTETYPE_AIRSLIDE;
-
-            for (size_t i = 0; i < archain.size(); ++i) {
-                const Arc &arc = archain[i];
-                chain.emplace_back(arc.t, arc.x, arc.y, arc.eX, arc.eY);
-                if (i == archain.size() - 1) {
-                    chain.emplace_back(arc.toT, arc.toX, arc.toY, arc.eX, arc.eY);
-                }
-            }
-
-            m_cctx.chains.push_back(std::move(chain));
-        }
+        AppendChainsToConfig();
 
         Print(m_cctx);
     }
@@ -237,11 +253,8 @@ namespace aff {
             std::string content = token.substr(7);
             content.erase(content.find(')'));
 
-            std::stringstream ss(content);
-            std::string param;
             std::vector<double> params;
-
-            while (getline(ss, param, ',')) {
+            for (const std::string &param: Split(content, ',')) {
                 params.push_back(std::stod(param));
             }
 
