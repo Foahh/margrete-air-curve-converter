@@ -53,6 +53,8 @@ private:
      * @param idx Index of the chain to interpolate.
      */
     void InterpolateChain(size_t idx);
+    void FinalizeChain();
+    void ResetOutput();
     /**
      * @brief Clamps note values to valid ranges.
      * @param note Note to clamp.

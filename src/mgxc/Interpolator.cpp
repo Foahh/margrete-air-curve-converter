@@ -13,6 +13,11 @@
 
 Interpolator::Interpolator(Config &cctx) : m_cctx(cctx) {}
 
+void Interpolator::ResetOutput() {
+    m_noteChains.clear();
+    m_noteChain.clear();
+}
+
 void Interpolator::PushSegment(const mgxc::Chain &chain, const mgxc::Joint &curr, const mgxc::Joint &next,
                                const mgxc::Joint &base) {
 
@@ -104,7 +109,7 @@ void Interpolator::HorizontalSegment(const mgxc::Chain &chain, const mgxc::Joint
 }
 
 void Interpolator::InterpolateChain(std::size_t idx) {
-    m_noteChain = {};
+    m_noteChain.clear();
 
     if (idx >= m_cctx.chains.size()) {
         throw std::out_of_range(std::format("Invalid chain index: {}", idx));
@@ -141,6 +146,11 @@ void Interpolator::InterpolateChain(std::size_t idx) {
         PushSegment(chain, curr, next, next);
     }
 
+    FinalizeChain();
+    m_noteChains.push_back(std::move(m_noteChain));
+}
+
+void Interpolator::FinalizeChain() {
     for (MP_NOTEINFO &note: m_noteChain) {
         note.tick *= m_cctx.snap;
         note.tick += m_cctx.tOffset;
@@ -153,8 +163,6 @@ void Interpolator::InterpolateChain(std::size_t idx) {
 
     m_noteChain.front().longAttr = MP_NOTELONGATTR_BEGIN;
     m_noteChain.back().longAttr = MP_NOTELONGATTR_END;
-
-    m_noteChains.push_back(std::move(m_noteChain));
 }
 
 void Print(const std::vector<std::vector<MP_NOTEINFO>> &chains) {
@@ -171,7 +179,7 @@ void Print(const std::vector<std::vector<MP_NOTEINFO>> &chains) {
 
 
 void Interpolator::Convert(const int idx) {
-    m_noteChains.clear();
+    ResetOutput();
 
     if (idx < 0) {
         for (size_t i = 0; i < m_cctx.chains.size(); ++i) {
