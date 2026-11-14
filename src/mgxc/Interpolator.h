@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "Config.h"
+#include "CurveFit.h"
 #include "MargreteHandle.h"
 #include "Primitive.h"
 
@@ -28,6 +29,8 @@ public:
      * @param mg MargreteHandle for plugin chart access.
      */
     void Commit(const MargreteHandle &mg) const;
+
+    const std::vector<std::vector<MP_NOTEINFO>> &GetNoteChains() const noexcept { return m_noteChains; }
 
 private:
     Config &m_cctx; /**< Reference to the plugin configuration context. */
@@ -61,8 +64,5 @@ private:
      */
     static void Clamp(MP_NOTEINFO &note);
 
-    void PushSegment(const mgxc::Chain &chain, const mgxc::Joint &curr, const mgxc::Joint &next,
-                     const mgxc::Joint &base);
-    void VerticalSegment(const mgxc::Chain &chain, const mgxc::Joint &curr, const mgxc::Joint &next);
-    void HorizontalSegment(const mgxc::Chain &chain, const mgxc::Joint &curr, const mgxc::Joint &next);
+    void PushPoint(const mgxc::Chain &chain, const mgxc::CurvePoint &point);
 };

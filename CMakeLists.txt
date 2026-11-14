@@ -74,6 +74,7 @@ function(build_main_library)
             src/Dialog.cpp
             src/Dialog.UI.cpp
             src/mgxc/Interpolator.cpp
+            src/mgxc/CurveFit.cpp
             src/mgxc/Easing.cpp
             src/mgxc/MargreteHandle.cpp
             src/Plugin.cpp
@@ -86,10 +87,12 @@ function(build_tests)
     find_package(Catch2 3 REQUIRED)
     add_executable(tests
             src/Test.cpp
+            src/Test.Interpolation.cpp
             src/aff/Parser.cpp
             src/Dialog.cpp
             src/Dialog.UI.cpp
             src/mgxc/Interpolator.cpp
+            src/mgxc/CurveFit.cpp
             src/mgxc/Easing.cpp
             src/mgxc/MargreteHandle.cpp
             src/Plugin.cpp
@@ -105,3 +108,12 @@ generate_configurations()
 setup_common_interface()
 build_main_library()
 build_tests()
+
+enable_testing()
+add_executable(curve_tests src/Test.CurveFit.cpp src/mgxc/CurveFit.cpp src/mgxc/Easing.cpp)
+target_link_libraries(curve_tests PRIVATE Catch2::Catch2WithMain)
+if (MSVC)
+    target_compile_options(curve_tests PRIVATE /EHsc /utf-8)
+endif ()
+add_test(NAME curve_fit COMMAND curve_tests)
+add_test(NAME interpolation COMMAND tests "[interpolation]")

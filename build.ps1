@@ -60,6 +60,7 @@ try {
     Write-Host "`n==> Configuring & Building $Target"
     Invoke-Checked "cmake --preset vcpkg"
     Invoke-Checked "cmake --build build --config $Target"
+    Invoke-Checked "ctest --test-dir build -C $Target --output-on-failure"
 
     Write-Host "`n==> Preparing '$PublishDir'"
     Remove-Item $PublishDir -Recurse -Force -ErrorAction SilentlyContinue
